@@ -1,0 +1,13 @@
+{
+  "java.jdt.ls.java.home": "/Library/Java/JavaVirtualMachines/openjdk-21.jdk/Contents/Home",
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-21",
+      "path": "/Library/Java/JavaVirtualMachines/openjdk-21.jdk/Contents/Home",
+      "default": true
+    }
+  ],
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "maven.executable.path": "./mvnw",
+  "spring-boot.ls.java.home": "/Library/Java/JavaVirtualMachines/openjdk-21.jdk/Contents/Home"
+}
