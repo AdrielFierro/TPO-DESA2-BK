@@ -1,0 +1,10 @@
+openapi: 3.0.0
+info:
+  title: test
+  description: ""
+  version: "1"
+servers:
+- url: https://virtserver.swaggerhub.com/none-3a0-3d9/test/1
+  description: SwaggerHub API Auto Mocking
+paths: {}
+components: {}

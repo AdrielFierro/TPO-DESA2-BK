@@ -1,0 +1,252 @@
+{
+  "asyncapi": "3.0.0",
+  "info": {
+    "title": "Cafeteria Portal Events API",
+    "version": "1.0.0",
+    "description": "AsyncAPI spec for events emitted by the Cafeteria Portal system. This document includes the standard EventEnvelope and event types: reservation.updated and bill.created."
+  },
+  "channels": {
+    "reservation.updated": {
+      "address": "reservation.updated",
+      "messages": {
+        "ReservationUpdated": {
+          "$ref": "#/components/messages/ReservationUpdated"
+        }
+      }
+    },
+    "bill.created": {
+      "address": "bill.created",
+      "messages": {
+        "BillCreated": {
+          "$ref": "#/components/messages/BillCreated"
+        }
+      }
+    }
+  },
+  "operations": {
+    "publishReservationUpdated": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/reservation.updated"
+      },
+      "summary": "Publishes when a reservation is updated or deleted.",
+      "messages": [
+        {
+          "$ref": "#/channels/reservation.updated/messages/ReservationUpdated"
+        }
+      ]
+    },
+    "publishBillCreated": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/bill.created"
+      },
+      "summary": "Publishes when a new bill is generated.",
+      "messages": [
+        {
+          "$ref": "#/channels/bill.created/messages/BillCreated"
+        }
+      ]
+    }
+  },
+  "components": {
+    "messageTraits": {
+      "EventEnvelope": {
+        "summary": "Estructura base para todos los eventos del sistema.",
+        "description": "Contiene los metadatos comunes de trazabilidad, actor y tenant. Todos los mensajes extienden este esquema, definiendo su propio payload.",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "eventId": {
+              "type": "string",
+              "format": "uuid",
+              "example": "d6703cc8-9e79-415d-ac03-a4dc7f6ab43c"
+            },
+            "eventType": {
+              "type": "string",
+              "example": "bill.created"
+            },
+            "occurredAt": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2025-09-17T14:15:22Z"
+            },
+            "emittedAt": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2025-09-17T14:15:23Z"
+            },
+            "sourceModule": {
+              "type": "string",
+              "example": "cafeteria-service"
+            },
+            "tenant": {
+              "type": "object",
+              "properties": {
+                "campusId": {
+                  "type": "string",
+                  "example": "CENTRO"
+                },
+                "orgId": {
+                  "type": "string",
+                  "example": "UADE"
+                }
+              },
+              "required": ["campusId", "orgId"]
+            },
+            "actor": {
+              "type": "object",
+              "properties": {
+                "userId": {
+                  "type": "string",
+                  "example": "user-123"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": ["student", "professor"],
+                  "example": "student"
+                }
+              },
+              "required": ["userId", "role"]
+            },
+            "version": {
+              "type": "string",
+              "example": "1.0"
+            },
+            "payload": {
+              "type": "object",
+              "description": "Datos específicos del evento."
+            }
+          },
+          "required": [
+            "eventId",
+            "eventType",
+            "occurredAt",
+            "emittedAt",
+            "sourceModule",
+            "tenant",
+            "actor",
+            "version",
+            "payload"
+          ]
+        }
+      }
+    },
+    "messages": {
+      "ReservationUpdated": {
+        "name": "ReservationUpdated",
+        "title": "Reservation Updated Event",
+        "summary": "Emitted when a reservation is modified or deleted.",
+        "traits": [
+          {
+            "$ref": "#/components/messageTraits/EventEnvelope"
+          }
+        ],
+        "payload": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "example": "resv-5678"
+            },
+            "startDateTime": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2025-09-17T12:00:00Z"
+            },
+            "endDateTime": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2025-09-17T13:00:00Z"
+            },
+            "eventType": {
+              "type": "string",
+              "enum": ["cafeteria"]
+            },
+            "title": {
+              "type": "string",
+              "example": "Reservation Updated"
+            },
+            "description": {
+              "type": "string",
+              "example": "Reservation time changed"
+            },
+            "action": {
+              "type": "string",
+              "enum": ["updated", "deleted"],
+              "example": "updated"
+            }
+          },
+          "required": [
+            "id",
+            "startDateTime",
+            "endDateTime",
+            "eventType",
+            "title",
+            "action"
+          ]
+        }
+      },
+      "BillCreated": {
+        "name": "BillCreated",
+        "title": "Bill Created Event",
+        "summary": "Emitted when a new bill is generated after cart confirmation.",
+        "traits": [
+          {
+            "$ref": "#/components/messageTraits/EventEnvelope"
+          }
+        ],
+        "payload": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "example": "bill-12345"
+            },
+            "date": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2025-09-17T14:15:00Z"
+            },
+            "subtotal": {
+              "type": "number",
+              "format": "float",
+              "example": 20000.5
+            },
+            "reservationID": {
+              "type": "string",
+              "example": "resv-5678"
+            },
+            "products": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "Pastel de papa"
+                  },
+                  "price": {
+                    "type": "number",
+                    "example": 10000
+                  },
+                  "ProductType": {
+                    "type": "string",
+                    "enum": ["PLATO", "BEBIDA", "POSTRE"],
+                    "example": "PLATO"
+                  }
+                },
+                "required": ["id", "name", "price", "ProductType"]
+              }
+            }
+          },
+          "required": ["id", "date", "subtotal", "reservationID", "products"]
+        }
+      }
+    }
+  }
+}

@@ -79,15 +79,66 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.6.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+		</dependency>
+		<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-webflux</artifactId>
+</dependency>
+
+
 
 	</dependencies>
 
 		<!-- Dependencias Fin -->
 
 
-
+<!-- Comienzo build -->
 	<build>
 		<plugins>
+
+		<plugin>
+        <groupId>org.openapitools</groupId>
+        <artifactId>openapi-generator-maven-plugin</artifactId>
+        <version>7.6.0</version>
+        <executions>
+          <execution>
+            <id>generate-spring-server</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <generatorName>spring</generatorName>
+              <inputSpec>${project.basedir}/openapi.yaml</inputSpec>
+
+              <output>${project.build.directory}/generated-sources/openapi</output>
+
+              <apiPackage>com.comedor.api</apiPackage>
+              <modelPackage>com.comedor.model</modelPackage>
+              <invokerPackage>com.comedor</invokerPackage>
+
+              <configOptions>
+                <useSpringBoot3>true</useSpringBoot3>
+                <useJakartaEe>true</useJakartaEe>
+                <interfaceOnly>true</interfaceOnly>
+                <skipDefaultInterface>true</skipDefaultInterface>
+                <serializableModel>true</serializableModel>
+                <useBeanValidation>true</useBeanValidation>
+                <dateLibrary>java8</dateLibrary>
+                <hideGenerationTimestamp>true</hideGenerationTimestamp>
+              </configOptions>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -112,8 +163,15 @@
 					</excludes>
 				</configuration>
 			</plugin>
+
+
+
+
 		</plugins>
 	</build>
+
+
+	<!-- Fin build -->
 	<repositories>
 		<repository>
 			<id>spring-snapshots</id>
