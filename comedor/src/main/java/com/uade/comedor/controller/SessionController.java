@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/sessions")
-public class SessionControllers {
+public class SessionController {
 
 
     @GetMapping("/test")
