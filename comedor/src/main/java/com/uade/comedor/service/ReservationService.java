@@ -49,4 +49,36 @@ public class ReservationService {
     public List<Reservation> getReservationsByUser(Long userId) {
         return reservationRepository.findByUserId(userId);
     }
+
+    public Reservation getReservationById(Long id) {
+        return reservationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
+    }
+
+    public Reservation cancelReservation(Long id) {
+        Reservation r = reservationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
+        r.setStatus(Reservation.ReservationStatus.CANCELADA);
+        return reservationRepository.save(r);
+    }
+
+    public Reservation confirmReservation(Long id) {
+        Reservation r = reservationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
+        if (r.getStatus() == Reservation.ReservationStatus.CANCELADA) {
+            throw new IllegalStateException("Cannot confirm a cancelled reservation");
+        }
+        if (r.getStatus() == Reservation.ReservationStatus.CONFIRMADA) {
+            // already confirmed
+            return r;
+        }
+        r.setStatus(Reservation.ReservationStatus.CONFIRMADA);
+        return reservationRepository.save(r);
+    }
+
+    public BigDecimal getReservationCost(Long reservationId) {
+        Reservation r = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
+        return r.getCost();
+    }
 }

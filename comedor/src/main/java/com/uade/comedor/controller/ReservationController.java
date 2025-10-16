@@ -40,4 +40,50 @@ public class ReservationController {
         List<Reservation> reservations = reservationService.getReservationsByUser(userId);
         return ResponseEntity.ok(reservations);
     }
+
+    // GET /reservations/byId/{reservationId}
+    @GetMapping("/byreservationId/{reservationId}")
+    public ResponseEntity<Reservation> getById(@PathVariable Long reservationId) {
+        try {
+            Reservation r = reservationService.getReservationById(reservationId);
+            return ResponseEntity.ok(r);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // DELETE /reservations/{reservationId} -> cancel
+    @DeleteMapping("/{reservationId}")
+    public ResponseEntity<Reservation> cancel(@PathVariable Long reservationId) {
+        try {
+            Reservation r = reservationService.cancelReservation(reservationId);
+            return ResponseEntity.ok(r);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // GET /reservations/cost?reservationId=...
+    @GetMapping("/cost")
+    public ResponseEntity<java.math.BigDecimal> getCost(@RequestParam Long reservationId) {
+        try {
+            java.math.BigDecimal cost = reservationService.getReservationCost(reservationId);
+            return ResponseEntity.ok(cost);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // POST /reservations/confirmation/{id}
+    @PostMapping("/confirmation/{id}")
+    public ResponseEntity<Reservation> confirm(@PathVariable Long id) {
+        try {
+            Reservation r = reservationService.confirmReservation(id);
+            return ResponseEntity.ok(r);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(409).build();
+        }
+    }
 }

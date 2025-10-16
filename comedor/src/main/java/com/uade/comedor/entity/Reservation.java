@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 public class Reservation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long reservationId;
 
     @Column(nullable = false)
     private Long userId;
@@ -42,11 +42,11 @@ public class Reservation {
 
     // Getters and Setters
     public Long getId() {
-        return id;
+        return reservationId;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setId(Long reservationId) {
+        this.reservationId = reservationId;
     }
 
     public Long getUserId() {
