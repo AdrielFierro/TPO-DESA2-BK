@@ -18,6 +18,9 @@ public class ReservationService {
     @Autowired
     private ReservationRepository reservationRepository;
 
+    @Autowired
+    private com.uade.comedor.service.ExternalApiService externalApiService;
+
     public Reservation createReservation(CreateReservationRequest request) {
         Reservation reservation = new Reservation();
         reservation.setUserId(request.getUserId());
@@ -26,7 +29,7 @@ public class ReservationService {
         reservation.setStartDateTime(request.getStartDateTime());
         reservation.setEndDateTime(request.getEndDateTime());
         reservation.setStatus(Reservation.ReservationStatus.ACTIVA);
-        reservation.setCost(BigDecimal.valueOf(0)); // You might want to calculate this based on your business logic
+        reservation.setCost(externalApiService.getReservationCost()); // ahora siempre 25
         reservation.setCreatedAt(LocalDateTime.now());
         return reservationRepository.save(reservation);
     }

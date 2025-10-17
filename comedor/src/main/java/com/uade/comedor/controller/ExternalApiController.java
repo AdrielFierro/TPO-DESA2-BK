@@ -11,10 +11,14 @@ import com.uade.comedor.service.ExternalApiService;
 
 import lombok.RequiredArgsConstructor;
 
+  
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/ext")
 public class ExternalApiController {
+
+
 
   private final ExternalApiService external;
 
