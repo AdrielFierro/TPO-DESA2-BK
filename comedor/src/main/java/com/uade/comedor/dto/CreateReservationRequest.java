@@ -4,10 +4,9 @@ import java.time.LocalDateTime;
 
 public class CreateReservationRequest {
     private Long userId;
-    private Long locationId;
+    private String location;
     private String shift;
     private LocalDateTime startDateTime;
-    private LocalDateTime endDateTime;
     
     // Getters and Setters
     public Long getUserId() {
@@ -18,12 +17,12 @@ public class CreateReservationRequest {
         this.userId = userId;
     }
 
-    public Long getLocationId() {
-        return locationId;
+    public String getLocation() {
+        return location;
     }
 
-    public void setLocationId(Long locationId) {
-        this.locationId = locationId;
+    public void setLocation(String location) {
+        this.location = location;
     }
 
     public String getShift() {
@@ -42,11 +41,5 @@ public class CreateReservationRequest {
         this.startDateTime = startDateTime;
     }
 
-    public LocalDateTime getEndDateTime() {
-        return endDateTime;
-    }
 
-    public void setEndDateTime(LocalDateTime endDateTime) {
-        this.endDateTime = endDateTime;
-    }
 }

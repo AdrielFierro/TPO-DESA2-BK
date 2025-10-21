@@ -3,6 +3,7 @@ package com.uade.comedor.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "bills")
@@ -14,6 +15,9 @@ public class Bill {
     @Column(nullable = false)
     private Long userId;
 
+    @Column(nullable = false)
+    private Long cartId;
+
     @Column
     private Long reservationId;
 
@@ -22,6 +26,14 @@ public class Bill {
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    @ManyToMany
+    @JoinTable(
+        name = "bill_products",
+        joinColumns = @JoinColumn(name = "bill_id"),
+        inverseJoinColumns = @JoinColumn(name = "product_id")
+    )
+    private List<Product> products;
 
     // Getters and Setters
     public Long getId() {
@@ -62,5 +74,21 @@ public class Bill {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public List<Product> getProducts() {
+        return products;
+    }
+
+    public void setProducts(List<Product> products) {
+        this.products = products;
+    }
+
+    public Long getCartId() {
+        return cartId;
+    }
+
+    public void setCartId(Long cartId) {
+        this.cartId = cartId;
     }
 }

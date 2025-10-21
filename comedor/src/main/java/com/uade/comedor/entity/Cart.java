@@ -3,6 +3,7 @@ package com.uade.comedor.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "carts")
@@ -27,6 +28,14 @@ public class Cart {
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    @ManyToMany
+    @JoinTable(
+        name = "cart_products",
+        joinColumns = @JoinColumn(name = "cart_id"),
+        inverseJoinColumns = @JoinColumn(name = "product_id")
+    )
+    private List<Product> products;
 
     public enum PaymentMethod {
         SALDOCUENTA, EFECTIVO, TRANSFERENCIA
@@ -83,5 +92,13 @@ public class Cart {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public List<Product> getProducts() {
+        return products;
+    }
+
+    public void setProducts(List<Product> products) {
+        this.products = products;
     }
 }

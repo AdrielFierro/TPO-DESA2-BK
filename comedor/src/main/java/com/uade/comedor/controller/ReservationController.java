@@ -64,8 +64,8 @@ public class ReservationController {
     }
 
     // GET /reservations/cost?reservationId=...
-    @GetMapping("/cost")
-    public ResponseEntity<java.math.BigDecimal> getCost(@RequestParam Long reservationId) {
+    @GetMapping("/cost/{reservationId}")
+    public ResponseEntity<java.math.BigDecimal> getCost(@PathVariable Long reservationId) {
         try {
             java.math.BigDecimal cost = reservationService.getReservationCost(reservationId);
             return ResponseEntity.ok(cost);

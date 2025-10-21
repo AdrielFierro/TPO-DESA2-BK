@@ -22,12 +22,12 @@ public class ReservationService {
     private com.uade.comedor.service.ExternalApiService externalApiService;
 
     public Reservation createReservation(CreateReservationRequest request) {
+        // Actualmente es userId esta hardcodeado en el request pero despues se sacara del JWT
         Reservation reservation = new Reservation();
         reservation.setUserId(request.getUserId());
-        reservation.setLocationId(request.getLocationId());
+        reservation.setLocation(request.getLocation());
         reservation.setShift(request.getShift());
         reservation.setStartDateTime(request.getStartDateTime());
-        reservation.setEndDateTime(request.getEndDateTime());
         reservation.setStatus(Reservation.ReservationStatus.ACTIVA);
         reservation.setCost(externalApiService.getReservationCost()); // ahora siempre 25
         reservation.setCreatedAt(LocalDateTime.now());
