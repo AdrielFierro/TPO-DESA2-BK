@@ -22,10 +22,13 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/v3/api-docs.yaml",
                                 "/swagger-ui.html",
-                    "/sessions/**",     // permite tu endpoint de prueba
-                    "/sessions/**",
-                    "/reservations/**", // permite crear reservas sin autenticación
-                    "/actuator/**"      // permite el actuator
+                    "/sessions/**", // permite tu endpoint de prueba
+                    "/products/**", // permite tus endpoints de productos sin autenticación
+                    "/reservations/**", // permite tus endpoints de reservas sin autenticación
+                    "/menus/**", // permite tus endpoints de reservas sin autenticación
+                    "/actuator/**",      // permite el actuator
+                    "/bills/**",      // permite tus endpoints de facturas sin autenticación
+                    "/carts/**"      // permite tus endpoints de reservas sin autenticación
                 ).permitAll()
                 .anyRequest().authenticated()
             )

@@ -15,16 +15,13 @@ public class Reservation {
     private Long userId;
 
     @Column(nullable = false)
-    private Long locationId;
+    private String location;
 
     @Column(nullable = false)
     private String shift;
 
     @Column(nullable = false)
     private LocalDateTime startDateTime;
-
-    @Column(nullable = false)
-    private LocalDateTime endDateTime;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -57,12 +54,12 @@ public class Reservation {
         this.userId = userId;
     }
 
-    public Long getLocationId() {
-        return locationId;
+    public String getLocation() {
+        return location;
     }
 
-    public void setLocationId(Long locationId) {
-        this.locationId = locationId;
+    public void setLocation(String location) {
+        this.location = location;
     }
 
     public String getShift() {
@@ -81,13 +78,6 @@ public class Reservation {
         this.startDateTime = startDateTime;
     }
 
-    public LocalDateTime getEndDateTime() {
-        return endDateTime;
-    }
-
-    public void setEndDateTime(LocalDateTime endDateTime) {
-        this.endDateTime = endDateTime;
-    }
 
     public ReservationStatus getStatus() {
         return status;

@@ -18,15 +18,18 @@ public class ReservationService {
     @Autowired
     private ReservationRepository reservationRepository;
 
+    @Autowired
+    private com.uade.comedor.service.ExternalApiService externalApiService;
+
     public Reservation createReservation(CreateReservationRequest request) {
+        // Actualmente es userId esta hardcodeado en el request pero despues se sacara del JWT
         Reservation reservation = new Reservation();
         reservation.setUserId(request.getUserId());
-        reservation.setLocationId(request.getLocationId());
+        reservation.setLocation(request.getLocation());
         reservation.setShift(request.getShift());
         reservation.setStartDateTime(request.getStartDateTime());
-        reservation.setEndDateTime(request.getEndDateTime());
         reservation.setStatus(Reservation.ReservationStatus.ACTIVA);
-        reservation.setCost(BigDecimal.valueOf(0)); // You might want to calculate this based on your business logic
+        reservation.setCost(externalApiService.getReservationCost()); // ahora siempre 25
         reservation.setCreatedAt(LocalDateTime.now());
         return reservationRepository.save(reservation);
     }

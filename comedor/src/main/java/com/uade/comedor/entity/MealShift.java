@@ -6,19 +6,30 @@ import jakarta.persistence.*;
 @Table(name = "meal_shifts")
 public class MealShift {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     @Enumerated(EnumType.STRING)
-    @Column(name = "meal_time")
-    private Meal.MealTime mealTime;
+    @Column(name = "meal_time", nullable = false)
+    private MealTime mealTime;
 
     @Column(nullable = false)
     private String schedule;
 
     // Getters and Setters
-    public Meal.MealTime getMealTime() {
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public MealTime getMealTime() {
         return mealTime;
     }
 
-    public void setMealTime(Meal.MealTime mealTime) {
+    public void setMealTime(MealTime mealTime) {
         this.mealTime = mealTime;
     }
 

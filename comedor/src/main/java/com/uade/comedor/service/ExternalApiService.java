@@ -19,7 +19,7 @@ public class ExternalApiService {
         .block(); // si querés modo síncrono
   }
 
-    public String getPing2(String url) {
+  public String getPing2(String url) {
     return webClient.post()
         .uri(url)
         .retrieve()
@@ -35,5 +35,10 @@ public class ExternalApiService {
         .retrieve()
         .bodyToMono(responseType)
         .block();
+  }
+
+  // Método para obtener el costo de la reserva (hardcodeado en 25)
+  public java.math.BigDecimal getReservationCost() {
+    return java.math.BigDecimal.valueOf(25.0);
   }
 }

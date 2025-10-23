@@ -2,6 +2,7 @@ package com.uade.comedor.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "menus")
@@ -10,15 +11,18 @@ public class Menu {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Long locationId;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DayOfWeek day;
 
     @Column(nullable = false)
     private LocalDateTime lastModified;
+
+    @Column(nullable = false)
+    private int location_id;
+
+    @OneToMany(mappedBy = "menu", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<MealBlock> meals;
 
     public enum DayOfWeek {
         LUNES, MARTES, MIERCOLES, JUEVES, VIERNES
@@ -31,14 +35,6 @@ public class Menu {
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public Long getLocationId() {
-        return locationId;
-    }
-
-    public void setLocationId(Long locationId) {
-        this.locationId = locationId;
     }
 
     public DayOfWeek getDay() {
@@ -55,5 +51,13 @@ public class Menu {
 
     public void setLastModified(LocalDateTime lastModified) {
         this.lastModified = lastModified;
+    }
+
+    public List<MealBlock> getMeals() {
+        return meals;
+    }
+
+    public void setMeals(List<MealBlock> meals) {
+        this.meals = meals;
     }
 }
