@@ -2,13 +2,8 @@ package com.uade.comedor.controller;
 
 import com.uade.comedor.entity.*;
 import com.uade.comedor.service.MenuService;
-import com.uade.comedor.dto.MenuCreateRequest;
-import com.uade.comedor.dto.MenuInputMeal;
-import com.uade.comedor.repository.ProductRepository;
-import com.uade.comedor.dto.MealShiftDTO;
+import com.uade.comedor.dto.*;
 
-import java.util.stream.Collectors;
-import java.util.ArrayList;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,20 +15,18 @@ import java.util.List;
 public class MenuController {
     
     private final MenuService menuService;
-    private final ProductRepository productRepository;
 
-    public MenuController(MenuService menuService, ProductRepository productRepository) {
+    public MenuController(MenuService menuService) {
         this.menuService = menuService;
-        this.productRepository = productRepository;
     }
 
     @GetMapping
-    public ResponseEntity<List<Menu>> getAllMenus() {
-        return ResponseEntity.ok(menuService.getAllMenus());
+    public ResponseEntity<MenuResponseDTO> getMenu() {
+        return ResponseEntity.ok(menuService.getMenu());
     }
 
     @GetMapping("/now")
-    public ResponseEntity<Menu> getCurrentMenu() {
+    public ResponseEntity<DayMenuResponseDTO> getCurrentMenu() {
         return ResponseEntity.ok(menuService.getCurrentMenu());
     }
 
@@ -49,88 +42,45 @@ public class MenuController {
     }
 
     @GetMapping("/{day}")
-    public ResponseEntity<Menu> getMenuByDay(@PathVariable Menu.DayOfWeek day) {
+    public ResponseEntity<DayMenuResponseDTO> getMenuByDay(@PathVariable MenuDay.DayOfWeek day) {
         return ResponseEntity.ok(menuService.getMenuByDay(day));
     }
 
     @PostMapping
-    public ResponseEntity<Menu> createMenu(@RequestBody Menu menu) {
-        Menu createdMenu = menuService.createMenu(menu);
-        return new ResponseEntity<>(createdMenu, HttpStatus.CREATED);
+    public ResponseEntity<Object> createMenu(@RequestBody MenuCreateRequest request) {
+        return new ResponseEntity<>(menuService.createMenuFromRequest(request), HttpStatus.CREATED);
     }
 
     // Accept DTO with product IDs for convenience
     @PostMapping("/byIds")
-    public ResponseEntity<Menu> createMenuByIds(@RequestBody MenuCreateRequest request) {
-        Menu menu = new Menu();
-        menu.setDay(Menu.DayOfWeek.valueOf(request.getDay()));
-        menu.setMeals(new ArrayList<>());
-
-        if (request.getMeals() != null) {
-            for (MenuInputMeal input : request.getMeals()) {
-                MealBlock mb = new MealBlock();
-                mb.setMealTime(MealTime.valueOf(input.getMealTime()));
-                mb.setSections(new ArrayList<>());
-
-                // We'll create one MenuSection of type PLATOS and add products by id
-                MenuSection platos = new MenuSection();
-                platos.setSectionType(MenuSection.SectionType.PLATOS);
-                platos.setProducts(
-                    input.getProducts().stream()
-                        .map(id -> productRepository.findById(id)
-                            .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + id)))
-                        .collect(Collectors.toList())
-                );
-                mb.getSections().add(platos);
-                menu.getMeals().add(mb);
-            }
-        }
-
-        Menu created = menuService.createMenu(menu);
-        return new ResponseEntity<>(created, HttpStatus.CREATED);
+    public ResponseEntity<Object> createMenuByIds(@RequestBody MenuCreateRequest request) {
+        return new ResponseEntity<>(menuService.createMenuFromRequest(request), HttpStatus.CREATED);
     }
 
     @PutMapping("/{day}")
-    public ResponseEntity<Menu> updateMenu(@PathVariable Menu.DayOfWeek day, @RequestBody Menu menu) {
-        if (menu.getDay() != day) {
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok(menuService.updateMenu(menu));
-    }
-
-    @PutMapping("/{day}/byIds")
-    public ResponseEntity<Menu> updateMenuByIds(@PathVariable String day, @RequestBody MenuCreateRequest request) {
-        Menu menu = new Menu();
-        menu.setDay(Menu.DayOfWeek.valueOf(day));
-        menu.setMeals(new ArrayList<>());
-
-        if (request.getMeals() != null) {
-            for (MenuInputMeal input : request.getMeals()) {
-                MealBlock mb = new MealBlock();
-                mb.setMealTime(MealTime.valueOf(input.getMealTime()));
-                mb.setSections(new ArrayList<>());
-
-                MenuSection platos = new MenuSection();
-                platos.setSectionType(MenuSection.SectionType.PLATOS);
-                platos.setProducts(
-                    input.getProducts().stream()
-                        .map(id -> productRepository.findById(id)
-                            .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + id)))
-                        .collect(Collectors.toList())
-                );
-                mb.getSections().add(platos);
-                menu.getMeals().add(mb);
-            }
-        }
-
-        Menu updated = menuService.updateMenu(menu);
-        return ResponseEntity.ok(updated);
+    public ResponseEntity<Object> updateMenu(@PathVariable MenuDay.DayOfWeek day, @RequestBody MenuCreateRequest request) {
+        return ResponseEntity.ok(menuService.createMenuFromRequest(request));
     }
 
     @GetMapping("/{day}/{mealTime}")
-    public ResponseEntity<MealBlock> getMenuByDayAndMealTime(
-            @PathVariable Menu.DayOfWeek day,
-            @PathVariable MealTime mealTime) {
+    public ResponseEntity<MenuMealResponseDTO> getMenuByDayAndMealTime(
+            @PathVariable MenuDay.DayOfWeek day,
+            @PathVariable MenuMeal.MealTime mealTime) {
         return ResponseEntity.ok(menuService.getMenuByDayAndMealTime(day, mealTime));
+    }
+
+    @PatchMapping("/{day}")
+    public ResponseEntity<DayMenuResponseDTO> updateDayMenu(
+            @PathVariable MenuDay.DayOfWeek day,
+            @RequestBody UpdateDayRequest request) {
+        return ResponseEntity.ok(menuService.updateDayMenu(day, request.getMeals()));
+    }
+
+    @PatchMapping("/{day}/{mealTime}")
+    public ResponseEntity<MenuMealResponseDTO> updateMealMenu(
+            @PathVariable MenuDay.DayOfWeek day,
+            @PathVariable MenuMeal.MealTime mealTime,
+            @RequestBody UpdateMealRequest request) {
+        return ResponseEntity.ok(menuService.updateMealMenu(day, mealTime, request.getProductIds()));
     }
 }

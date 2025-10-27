@@ -3,22 +3,13 @@ package com.uade.comedor.dto;
 import java.util.List;
 
 public class MenuCreateRequest {
-    private String day;
-    private List<MenuInputMeal> meals;
+    private List<MenuDayCreateRequest> days;
 
-    public String getDay() {
-        return day;
+    public List<MenuDayCreateRequest> getDays() {
+        return days;
     }
 
-    public void setDay(String day) {
-        this.day = day;
-    }
-
-    public List<MenuInputMeal> getMeals() {
-        return meals;
-    }
-
-    public void setMeals(List<MenuInputMeal> meals) {
-        this.meals = meals;
+    public void setDays(List<MenuDayCreateRequest> days) {
+        this.days = days;
     }
 }

@@ -1,131 +1,227 @@
 package com.uade.comedor.service;
 
+import com.uade.comedor.dto.*;
 import com.uade.comedor.entity.*;
 import com.uade.comedor.repository.MenuRepository;
+import com.uade.comedor.repository.ProductRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
-import java.time.DayOfWeek;
-import java.util.List;
-import java.util.Arrays;
- 
+import java.util.*;
 
 @Service
 public class MenuService {
+
     private final MenuRepository menuRepository;
-    
-    public MenuService(MenuRepository menuRepository) {
+    private final ProductRepository productRepository;
+    private final MenuDTOMapper menuDTOMapper;
+
+    public MenuService(MenuRepository menuRepository, ProductRepository productRepository, MenuDTOMapper menuDTOMapper) {
         this.menuRepository = menuRepository;
+        this.productRepository = productRepository;
+        this.menuDTOMapper = menuDTOMapper;
     }
 
     public List<Menu> getAllMenus() {
         return menuRepository.findAll();
     }
 
-    public Menu getCurrentMenu() {
-        // Obtener el día actual
-        DayOfWeek currentDay = LocalDateTime.now().getDayOfWeek();
-        Menu.DayOfWeek menuDay = convertToMenuDay(currentDay);
+    @Transactional
+    public Object createMenuFromRequest(MenuCreateRequest req) {
+        Menu menu = new Menu();
+        menu.setLastModified(LocalDateTime.now());
+        menu.setLocationId(1); // Por ahora hardcodeado
+        List<MenuDay> days = new ArrayList<>();
         
-        // Si es fin de semana, lanzar excepción
+        for (MenuDayCreateRequest dayReq : req.getDays()) {
+            MenuDay day = new MenuDay();
+            day.setDay(MenuDay.DayOfWeek.valueOf(dayReq.getDay().toUpperCase()));
+            day.setMenu(menu);
+            day.setMeals(new ArrayList<>());
+            
+            // Asegurar que solo haya un meal block por mealTime
+            Map<MenuMeal.MealTime, MenuMealCreateRequest> mealMap = new HashMap<>();
+            for (MenuMealCreateRequest mealReq : dayReq.getMeals()) {
+                MenuMeal.MealTime mealTime = MenuMeal.MealTime.valueOf(mealReq.getMealTime().toUpperCase());
+                if (mealMap.containsKey(mealTime)) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                        "Solo puede haber un bloque de comida por tipo (DESAYUNO, ALMUERZO, MERIENDA, CENA) en cada día");
+                }
+                mealMap.put(mealTime, mealReq);
+            }
+            
+            // Crear los meal blocks únicos
+            for (MenuMealCreateRequest mealReq : mealMap.values()) {
+                MenuMeal meal = new MenuMeal();
+                meal.setMealTime(MenuMeal.MealTime.valueOf(mealReq.getMealTime().toUpperCase()));
+                meal.setMenuDay(day);
+                
+                List<Product> products = productRepository.findAllById(mealReq.getProductIds());
+                meal.setProducts(products);
+                
+                day.getMeals().add(meal);
+            }
+            
+            days.add(day);
+        }
+        
+        menu.setDays(days);
+        menu = menuRepository.save(menu);
+        return menuDTOMapper.convertToDTO(menu);
+    }
+
+    @Transactional
+    public DayMenuResponseDTO getMenuByDay(MenuDay.DayOfWeek day) {
+        Menu menu = menuRepository.findByDays_Day(day)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menú no encontrado para " + day));
+        
+        MenuDay menuDay = menu.getDays().stream()
+            .filter(d -> d.getDay().equals(day))
+            .findFirst()
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Día no encontrado en el menú"));
+        
+        return menuDTOMapper.convertDayToResponseDTO(menuDay);
+    }
+
+    @Transactional
+    public DayMenuResponseDTO getCurrentMenu() {
+        java.time.DayOfWeek today = LocalDateTime.now().getDayOfWeek();
+        MenuDay.DayOfWeek menuDay = convertToMenuDay(today);
+
         if (menuDay == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No hay menú disponible los fines de semana");
         }
 
-        // Since there's a single Menu in the system, fetch it and verify the day
-        return menuRepository.findAll().stream()
-            .findFirst()
-            .filter(m -> m.getDay() == menuDay)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No hay menú configurado para hoy"));
+        return getMenuByDay(menuDay);
     }
 
-    public List<MealShift> getMealShifts() {
-        return Arrays.asList(
-            createMealShift(MealTime.DESAYUNO, "07:00-12:00"),
-            createMealShift(MealTime.ALMUERZO, "12:00-16:00"),
-            createMealShift(MealTime.MERIENDA, "16:00-20:00"),
-            createMealShift(MealTime.CENA, "20:00-22:00")
-        );
-    }
-
-    public Menu getMenuByDay(Menu.DayOfWeek day) {
-        return menuRepository.findAll().stream()
-            .findFirst()
-            .filter(m -> m.getDay() == day)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menú no encontrado para el día " + day));
-    }
-
-    @Transactional
-    public Menu createMenu(Menu menu) {
-        // En este sistema solo debe existir un Menu. Rechazar creación si ya existe uno.
-        if (menuRepository.count() > 0) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un menú en el sistema");
-        }
-        // Asegurar que las referencias padre-hijo estén seteadas para JPA
-        if (menu.getMeals() != null) {
-            menu.getMeals().forEach(mealBlock -> {
-                mealBlock.setMenu(menu);
-                if (mealBlock.getSections() != null) {
-                    mealBlock.getSections().forEach(section -> section.setMealBlock(mealBlock));
-                }
-            });
-        }
-
-        menu.setLastModified(LocalDateTime.now());
-        return menuRepository.save(menu);
-    }
-
-    @Transactional
-    public Menu updateMenu(Menu menu) {
-        // Usar el único menú existente
-        Menu existingMenu = menuRepository.findAll().stream()
-            .findFirst()
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No hay menú creado aún"));
-
-        // Mantener el ID de la entidad existente
-        menu.setId(existingMenu.getId());
-
-        // Asegurar que las referencias padre-hijo estén seteadas para JPA
-        if (menu.getMeals() != null) {
-            menu.getMeals().forEach(mealBlock -> {
-                mealBlock.setMenu(menu);
-                if (mealBlock.getSections() != null) {
-                    mealBlock.getSections().forEach(section -> section.setMealBlock(mealBlock));
-                }
-            });
-        }
-
-        menu.setLastModified(LocalDateTime.now());
-        return menuRepository.save(menu);
-    }
-
-    public MealBlock getMenuByDayAndMealTime(Menu.DayOfWeek day, MealTime mealTime) {
-        Menu menu = getMenuByDay(day);
-        return menu.getMeals().stream()
-            .filter(meal -> meal.getMealTime() == mealTime)
-            .findFirst()
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
-                "No se encontró el turno " + mealTime + " para el día " + day));
-    }
-
-    private MealShift createMealShift(MealTime mealTime, String schedule) {
-        MealShift shift = new MealShift();
-        shift.setMealTime(mealTime);
-        shift.setSchedule(schedule);
-        return shift;
-    }
-
-    private Menu.DayOfWeek convertToMenuDay(DayOfWeek day) {
-        return switch (day) {
-            case MONDAY -> Menu.DayOfWeek.LUNES;
-            case TUESDAY -> Menu.DayOfWeek.MARTES;
-            case WEDNESDAY -> Menu.DayOfWeek.MIERCOLES;
-            case THURSDAY -> Menu.DayOfWeek.JUEVES;
-            case FRIDAY -> Menu.DayOfWeek.VIERNES;
-            default -> null;
+    private MenuDay.DayOfWeek convertToMenuDay(java.time.DayOfWeek systemDay) {
+        return switch (systemDay) {
+            case MONDAY -> MenuDay.DayOfWeek.LUNES;
+            case TUESDAY -> MenuDay.DayOfWeek.MARTES;
+            case WEDNESDAY -> MenuDay.DayOfWeek.MIERCOLES;
+            case THURSDAY -> MenuDay.DayOfWeek.JUEVES;
+            case FRIDAY -> MenuDay.DayOfWeek.VIERNES;
+            default -> null; // fin de semana
         };
     }
+
+    @Transactional
+    public MenuResponseDTO getMenu() {
+        List<Menu> menus = menuRepository.findAll();
+        if (!menus.isEmpty()) {
+            return menuDTOMapper.convertToResponseDTO(menus.get(0));
+        }
+        return null;
+    }
+
+    public Menu updateMenu(Menu menu) {
+        return menuRepository.save(menu);
+    }
+
+    @Transactional
+    public MenuMealResponseDTO getMenuByDayAndMealTime(MenuDay.DayOfWeek day, MenuMeal.MealTime mealTime) {
+        Menu menu = menuRepository.findByDays_Day(day)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menú no encontrado para " + day));
+        
+        MenuMeal meal = menu.getDays().stream()
+            .filter(d -> d.getDay().equals(day))
+            .flatMap(d -> d.getMeals().stream())
+            .filter(m -> m.getMealTime().equals(mealTime))
+            .findFirst()
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comida no encontrada"));
+        
+        return menuDTOMapper.convertMealToResponseDTO(meal);
+    }
+
+    @Transactional
+    public DayMenuResponseDTO updateDayMenu(MenuDay.DayOfWeek day, List<MenuMealCreateRequest> mealsRequest) {
+        Menu menu = menuRepository.findByDays_Day(day)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menú no encontrado para " + day));
+        
+        // Encontrar el día específico
+        MenuDay menuDay = menu.getDays().stream()
+            .filter(d -> d.getDay().equals(day))
+            .findFirst()
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Día no encontrado"));
+        
+        // Validar que no haya duplicados de mealTime en la request
+        Set<MenuMeal.MealTime> mealTimes = new HashSet<>();
+        for (MenuMealCreateRequest mealReq : mealsRequest) {
+            MenuMeal.MealTime mealTime = MenuMeal.MealTime.valueOf(mealReq.getMealTime().toUpperCase());
+            if (!mealTimes.add(mealTime)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                    "Solo puede haber un bloque de comida por tipo (DESAYUNO, ALMUERZO, MERIENDA, CENA)");
+            }
+        }
+        
+        // Actualizar solo los meal blocks especificados
+        for (MenuMealCreateRequest mealReq : mealsRequest) {
+            MenuMeal.MealTime mealTime = MenuMeal.MealTime.valueOf(mealReq.getMealTime().toUpperCase());
+            
+            // Buscar el meal block existente o crear uno nuevo
+            MenuMeal meal = menuDay.getMeals().stream()
+                .filter(m -> m.getMealTime().equals(mealTime))
+                .findFirst()
+                .orElse(null);
+            
+            if (meal == null) {
+                // Crear nuevo meal block si no existe
+                meal = new MenuMeal();
+                meal.setMealTime(mealTime);
+                meal.setMenuDay(menuDay);
+                menuDay.getMeals().add(meal);
+            }
+            
+            // Actualizar los productos
+            List<Product> products = productRepository.findAllById(mealReq.getProductIds());
+            meal.setProducts(products);
+        }
+        
+        menu.setLastModified(LocalDateTime.now());
+        menuRepository.save(menu);
+        
+        return menuDTOMapper.convertDayToResponseDTO(menuDay);
+    }
+
+    @Transactional
+    public MenuMealResponseDTO updateMealMenu(MenuDay.DayOfWeek day, MenuMeal.MealTime mealTime, List<Long> productIds) {
+        Menu menu = menuRepository.findByDays_Day(day)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menú no encontrado para " + day));
+        
+        // Encontrar el día específico
+        MenuDay menuDay = menu.getDays().stream()
+            .filter(d -> d.getDay().equals(day))
+            .findFirst()
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Día no encontrado"));
+        
+        // Buscar el meal block existente o crear uno nuevo
+        MenuMeal meal = menuDay.getMeals().stream()
+            .filter(m -> m.getMealTime().equals(mealTime))
+            .findFirst()
+            .orElse(null);
+        
+        if (meal == null) {
+            // Crear nuevo meal block si no existe
+            meal = new MenuMeal();
+            meal.setMealTime(mealTime);
+            meal.setMenuDay(menuDay);
+            menuDay.getMeals().add(meal);
+        }
+        
+        // Actualizar los productos
+        List<Product> products = productRepository.findAllById(productIds);
+        meal.setProducts(products);
+        
+        menu.setLastModified(LocalDateTime.now());
+        menuRepository.save(menu);
+        
+        return menuDTOMapper.convertMealToResponseDTO(meal);
+    }
+
 }
