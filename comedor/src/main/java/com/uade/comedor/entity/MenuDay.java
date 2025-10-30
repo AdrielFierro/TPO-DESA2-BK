@@ -1,7 +1,7 @@
 package com.uade.comedor.entity;
 
 import jakarta.persistence.*;
-import java.util.List;
+import java.util.Set;
 
 @Entity
 public class MenuDay {
@@ -12,8 +12,8 @@ public class MenuDay {
     @Enumerated(EnumType.STRING)
     private DayOfWeek day;
     
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "menuDay", fetch = FetchType.EAGER)
-    private List<MenuMeal> meals;
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "menuDay", fetch = FetchType.LAZY)
+    private Set<MenuMeal> meals;
     
     @ManyToOne
     @JoinColumn(name = "menu_id")
@@ -40,11 +40,11 @@ public class MenuDay {
         this.day = day;
     }
 
-    public List<MenuMeal> getMeals() {
+    public Set<MenuMeal> getMeals() {
         return meals;
     }
 
-    public void setMeals(List<MenuMeal> meals) {
+    public void setMeals(Set<MenuMeal> meals) {
         this.meals = meals;
     }
 

@@ -7,7 +7,6 @@ import com.uade.comedor.repository.ProductRepository;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -36,13 +35,13 @@ public class MenuService {
         Menu menu = new Menu();
         menu.setLastModified(LocalDateTime.now());
         menu.setLocationId(1); // Por ahora hardcodeado
-        List<MenuDay> days = new ArrayList<>();
+        Set<MenuDay> days = new HashSet<>();
         
         for (MenuDayCreateRequest dayReq : req.getDays()) {
             MenuDay day = new MenuDay();
             day.setDay(MenuDay.DayOfWeek.valueOf(dayReq.getDay().toUpperCase()));
             day.setMenu(menu);
-            day.setMeals(new ArrayList<>());
+            day.setMeals(new HashSet<>());
             
             // Asegurar que solo haya un meal block por mealTime
             Map<MenuMeal.MealTime, MenuMealCreateRequest> mealMap = new HashMap<>();
@@ -113,11 +112,9 @@ public class MenuService {
 
     @Transactional
     public MenuResponseDTO getMenu() {
-        List<Menu> menus = menuRepository.findAll();
-        if (!menus.isEmpty()) {
-            return menuDTOMapper.convertToResponseDTO(menus.get(0));
-        }
-        return null;
+        return menuRepository.findTopByOrderByLastModifiedDesc()
+                .map(menuDTOMapper::convertToResponseDTO)
+                .orElse(null);
     }
 
     public Menu updateMenu(Menu menu) {

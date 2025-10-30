@@ -2,7 +2,7 @@ package com.uade.comedor.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "menus")
@@ -17,8 +17,8 @@ public class Menu {
     @Column(nullable = false)
     private int location_id;
 
-    @OneToMany(mappedBy = "menu", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    private List<MenuDay> days;
+    @OneToMany(mappedBy = "menu", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Set<MenuDay> days;
 
     // Getters and Setters
     public Long getId() {
@@ -26,11 +26,11 @@ public class Menu {
     }
 
 
-    public List<MenuDay> getDays() {
+    public Set<MenuDay> getDays() {
         return days;
     }
 
-    public void setDays(List<MenuDay> days) {
+    public void setDays(Set<MenuDay> days) {
         this.days = days;
     }
 

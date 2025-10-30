@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -37,7 +36,7 @@ public class MenuDTOMapper {
         return dto;
     }
     
-    private List<MenuDayResponseDTO> convertDaysToResponseDTO(List<MenuDay> days) {
+    private List<MenuDayResponseDTO> convertDaysToResponseDTO(Set<MenuDay> days) {
         if (days == null) {
             return new ArrayList<>();
         }
@@ -50,7 +49,7 @@ public class MenuDTOMapper {
         }).collect(Collectors.toList());
     }
     
-    private List<MenuMealResponseDTO> convertMealsToResponseDTO(List<MenuMeal> meals) {
+    private List<MenuMealResponseDTO> convertMealsToResponseDTO(Set<MenuMeal> meals) {
         if (meals == null) {
             return new ArrayList<>();
         }
@@ -110,7 +109,7 @@ public class MenuDTOMapper {
         return dto;
     }
     
-    private List<MenuDayDTO> convertDaysToDTO(List<MenuDay> days) {
+    private List<MenuDayDTO> convertDaysToDTO(Set<MenuDay> days) {
         if (days == null) {
             return new ArrayList<>();
         }
@@ -123,7 +122,7 @@ public class MenuDTOMapper {
         }).collect(Collectors.toList());
     }
     
-    private List<MenuMealDTO> convertMealsToDTO(List<MenuMeal> meals) {
+    private List<MenuMealDTO> convertMealsToDTO(Set<MenuMeal> meals) {
         if (meals == null) {
             return new ArrayList<>();
         }

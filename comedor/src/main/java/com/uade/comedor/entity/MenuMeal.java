@@ -12,7 +12,7 @@ public class MenuMeal {
     @Enumerated(EnumType.STRING)
     private MealTime mealTime;
     
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "menu_meal_products",
         joinColumns = @JoinColumn(name = "menu_meal_id"),
