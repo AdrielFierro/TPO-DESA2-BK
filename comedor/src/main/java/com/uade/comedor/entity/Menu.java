@@ -9,11 +9,7 @@ import java.util.List;
 public class Menu {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private DayOfWeek day;
+    private Long menuid;
 
     @Column(nullable = false)
     private LocalDateTime lastModified;
@@ -21,28 +17,21 @@ public class Menu {
     @Column(nullable = false)
     private int location_id;
 
-    @OneToMany(mappedBy = "menu", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<MealBlock> meals;
-
-    public enum DayOfWeek {
-        LUNES, MARTES, MIERCOLES, JUEVES, VIERNES
-    }
+    @OneToMany(mappedBy = "menu", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<MenuDay> days;
 
     // Getters and Setters
     public Long getId() {
-        return id;
+        return menuid;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+
+    public List<MenuDay> getDays() {
+        return days;
     }
 
-    public DayOfWeek getDay() {
-        return day;
-    }
-
-    public void setDay(DayOfWeek day) {
-        this.day = day;
+    public void setDays(List<MenuDay> days) {
+        this.days = days;
     }
 
     public LocalDateTime getLastModified() {
@@ -53,11 +42,13 @@ public class Menu {
         this.lastModified = lastModified;
     }
 
-    public List<MealBlock> getMeals() {
-        return meals;
+    public int getLocationId() {
+        return location_id;
     }
 
-    public void setMeals(List<MealBlock> meals) {
-        this.meals = meals;
+    public void setLocationId(int locationId) {
+        this.location_id = locationId;
     }
+
+
 }
