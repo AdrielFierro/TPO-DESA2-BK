@@ -9,6 +9,8 @@ import com.uade.comedor.entity.Reservation;
 import com.uade.comedor.entity.Location;
 import com.uade.comedor.entity.MealTimeSlot;
 import com.uade.comedor.dto.CreateReservationRequest;
+import com.uade.comedor.events.publisher.EventPublisher;
+import com.uade.comedor.events.dto.ReservationUpdatedPayload;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -27,6 +29,9 @@ public class ReservationService {
     
     @Autowired
     private MealTimeScheduleService scheduleService;
+    
+    @Autowired
+    private EventPublisher eventPublisher;
 
     public Reservation createReservation(CreateReservationRequest request) {
         LocalTime reservationTime = request.getReservationDate().toLocalTime();
@@ -94,7 +99,12 @@ public class ReservationService {
         reservation.setCost(externalApiService.getReservationCost());
         reservation.setCreatedAt(LocalDateTime.now());
         
-        return reservationRepository.save(reservation);
+        Reservation savedReservation = reservationRepository.save(reservation);
+        
+        // 🎉 Publicar evento de reserva creada
+        publishReservationEvent(savedReservation, location, targetSlot, ReservationUpdatedPayload.ReservationAction.created);
+        
+        return savedReservation;
     }
     
     // Método helper para determinar el enum MealTimeSlot basado en mealTime y hora de inicio
@@ -133,7 +143,14 @@ public class ReservationService {
         Reservation r = reservationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
         r.setStatus(Reservation.ReservationStatus.CANCELADA);
-        return reservationRepository.save(r);
+        Reservation savedReservation = reservationRepository.save(r);
+        
+        // 🎉 Publicar evento de reserva cancelada
+        Location location = locationService.getLocationById(r.getLocationId());
+        MealTimeScheduleService.TimeSlot slot = getSlotFromReservation(r);
+        publishReservationEvent(savedReservation, location, slot, ReservationUpdatedPayload.ReservationAction.cancelled);
+        
+        return savedReservation;
     }
 
     public Reservation confirmReservation(Long id) {
@@ -147,12 +164,81 @@ public class ReservationService {
             return r;
         }
         r.setStatus(Reservation.ReservationStatus.CONFIRMADA);
-        return reservationRepository.save(r);
+        Reservation savedReservation = reservationRepository.save(r);
+        
+        // 🎉 Publicar evento de reserva confirmada
+        Location location = locationService.getLocationById(r.getLocationId());
+        MealTimeScheduleService.TimeSlot slot = getSlotFromReservation(r);
+        publishReservationEvent(savedReservation, location, slot, ReservationUpdatedPayload.ReservationAction.confirmed);
+        
+        return savedReservation;
     }
 
     public BigDecimal getReservationCost(Long reservationId) {
         Reservation r = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
         return r.getCost();
+    }
+    
+    /**
+     * Obtiene el TimeSlot correspondiente a una reserva existente.
+     */
+    private MealTimeScheduleService.TimeSlot getSlotFromReservation(Reservation reservation) {
+        LocalTime reservationTime = reservation.getReservationDate().toLocalTime();
+        List<MealTimeScheduleService.TimeSlot> slots = scheduleService.calculateTimeSlots(reservation.getMealTime());
+        
+        for (MealTimeScheduleService.TimeSlot slot : slots) {
+            if (reservationTime.equals(slot.getStartTime())) {
+                return slot;
+            }
+        }
+        
+        // Si no encontramos el slot exacto, retornamos el primero como fallback
+        return slots.get(0);
+    }
+    
+    /**
+     * Publica un evento de reserva actualizada a RabbitMQ.
+     */
+    private void publishReservationEvent(Reservation reservation, Location location, 
+                                         MealTimeScheduleService.TimeSlot slot, 
+                                         ReservationUpdatedPayload.ReservationAction action) {
+        ReservationUpdatedPayload payload = ReservationUpdatedPayload.builder()
+            .reservationId(reservation.getId().toString())
+            .startDateTime(reservation.getReservationDate().toLocalDate().atTime(slot.getStartTime()))
+            .endDateTime(reservation.getReservationDate().toLocalDate().atTime(slot.getEndTime()))
+            .title("Reserva de comedor")
+            .description(buildDescription(action, reservation.getMealTime(), location.getName()))
+            .action(action)
+            .locationId(location.getName())
+            .build();
+        
+        eventPublisher.publishReservationUpdated(
+            payload, 
+            reservation.getUserId().toString(), 
+            "student"
+        );
+    }
+    
+    /**
+     * Construye una descripción legible para el evento.
+     */
+    private String buildDescription(ReservationUpdatedPayload.ReservationAction action, 
+                                     com.uade.comedor.entity.MenuMeal.MealTime mealTime,
+                                     String locationName) {
+        String actionText;
+        switch (action) {
+            case created: actionText = "creada"; break;
+            case updated: actionText = "modificada"; break;
+            case confirmed: actionText = "confirmada"; break;
+            case cancelled: actionText = "cancelada"; break;
+            case deleted: actionText = "eliminada"; break;
+            default: actionText = "actualizada";
+        }
+        
+        return String.format("Reserva de %s %s en %s", 
+            mealTime.name().toLowerCase(), 
+            actionText, 
+            locationName);
     }
 }
