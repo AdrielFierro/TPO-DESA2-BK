@@ -15,9 +15,11 @@ import java.util.List;
 public class MenuController {
     
     private final MenuService menuService;
+    private final com.uade.comedor.service.MealTimeScheduleService scheduleService;
 
-    public MenuController(MenuService menuService) {
+    public MenuController(MenuService menuService, com.uade.comedor.service.MealTimeScheduleService scheduleService) {
         this.menuService = menuService;
+        this.scheduleService = scheduleService;
     }
 
     @GetMapping
@@ -32,12 +34,13 @@ public class MenuController {
 
     @GetMapping("/shift")
     public ResponseEntity<List<MealShiftDTO>> getMealShifts() {
-        List<MealShiftDTO> shifts = List.of(
-            new MealShiftDTO("DESAYUNO", "07:00-12:00"),
-            new MealShiftDTO("ALMUERZO", "12:00-16:00"),
-            new MealShiftDTO("MERIENDA", "16:00-20:00"),
-            new MealShiftDTO("CENA", "20:00-22:00")
-        );
+        List<com.uade.comedor.dto.MealTimeScheduleDTO> schedules = scheduleService.getAllSchedules();
+        List<MealShiftDTO> shifts = schedules.stream()
+            .map(s -> new MealShiftDTO(
+                s.getMealTime().name(),
+                s.getStartTime().toString() + "-" + s.getEndTime().toString()
+            ))
+            .collect(java.util.stream.Collectors.toList());
         return ResponseEntity.ok(shifts);
     }
 

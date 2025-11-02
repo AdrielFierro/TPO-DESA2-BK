@@ -15,13 +15,18 @@ public class Reservation {
     private Long userId;
 
     @Column(nullable = false)
-    private String location;
+    private Long locationId; // Referencia a Location
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MenuMeal.MealTime mealTime; // DESAYUNO, ALMUERZO, MERIENDA, CENA
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MealTimeSlot reservationTimeSlot; // Slot específico de 1 hora
 
     @Column(nullable = false)
-    private String shift;
-
-    @Column(nullable = false)
-    private LocalDateTime startDateTime;
+    private LocalDateTime reservationDate; // Fecha de la reserva (sin hora, la hora viene del slot)
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -54,30 +59,37 @@ public class Reservation {
         this.userId = userId;
     }
 
-    public String getLocation() {
-        return location;
+    public Long getLocationId() {
+        return locationId;
     }
 
-    public void setLocation(String location) {
-        this.location = location;
+    public void setLocationId(Long locationId) {
+        this.locationId = locationId;
     }
 
-    public String getShift() {
-        return shift;
+    public MenuMeal.MealTime getMealTime() {
+        return mealTime;
     }
 
-    public void setShift(String shift) {
-        this.shift = shift;
+    public void setMealTime(MenuMeal.MealTime mealTime) {
+        this.mealTime = mealTime;
     }
 
-    public LocalDateTime getStartDateTime() {
-        return startDateTime;
+    public MealTimeSlot getReservationTimeSlot() {
+        return reservationTimeSlot;
     }
 
-    public void setStartDateTime(LocalDateTime startDateTime) {
-        this.startDateTime = startDateTime;
+    public void setReservationTimeSlot(MealTimeSlot reservationTimeSlot) {
+        this.reservationTimeSlot = reservationTimeSlot;
     }
 
+    public LocalDateTime getReservationDate() {
+        return reservationDate;
+    }
+
+    public void setReservationDate(LocalDateTime reservationDate) {
+        this.reservationDate = reservationDate;
+    }
 
     public ReservationStatus getStatus() {
         return status;

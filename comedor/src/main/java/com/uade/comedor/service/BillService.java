@@ -36,7 +36,7 @@ public class BillService {
         bill.setCartId(cart.getId());
         bill.setSubtotal(cart.getTotal());
         bill.setCreatedAt(LocalDateTime.now());
-    bill.setProducts(new java.util.ArrayList<>(cart.getProducts()));
+        bill.setProducts(new java.util.ArrayList<>(cart.getProducts()));
         
         return billRepository.save(bill);
     }

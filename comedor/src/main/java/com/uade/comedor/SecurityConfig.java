@@ -25,10 +25,11 @@ public class SecurityConfig {
                     "/sessions/**", // permite tu endpoint de prueba
                     "/products/**", // permite tus endpoints de productos sin autenticación
                     "/reservations/**", // permite tus endpoints de reservas sin autenticación
-                    "/menus/**", // permite tus endpoints de reservas sin autenticación
+                    "/menus/**", // permite tus endpoints de menús sin autenticación
+                    "/locations/**", // permite tus endpoints de locations sin autenticación
                     "/actuator/**",      // permite el actuator
                     "/bills/**",      // permite tus endpoints de facturas sin autenticación
-                    "/carts/**"      // permite tus endpoints de reservas sin autenticación
+                    "/carts/**"      // permite tus endpoints de carritos sin autenticación
                 ).permitAll()
                 .anyRequest().authenticated()
             )

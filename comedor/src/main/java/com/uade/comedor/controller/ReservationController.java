@@ -23,14 +23,10 @@ public class ReservationController {
         return ResponseEntity.ok(reservation);
     }
 
-    // GET /reservations?startDate=...&endDate=...&page=...&pageSize=...
+    // GET /reservations - Obtener todas las reservas
     @GetMapping
-    public ResponseEntity<List<Reservation>> getReservations(
-            @RequestParam(required = false) LocalDateTime startDate,
-            @RequestParam(required = false) LocalDateTime endDate,
-            @RequestParam(required = false, defaultValue = "0") int page,
-            @RequestParam(required = false, defaultValue = "50") int pageSize) {
-        List<Reservation> reservations = reservationService.getReservations(startDate, endDate, page, pageSize);
+    public ResponseEntity<List<Reservation>> getReservations() {
+        List<Reservation> reservations = reservationService.getAllReservations();
         return ResponseEntity.ok(reservations);
     }
 

@@ -32,7 +32,7 @@ public class CartService {
     public Cart createCart(CartCreateRequest request) {
         List<Product> products = getProductsFromIds(request.getCart());
         Cart cart = new Cart();
-        cart.setUserId(1L); // TODO: Get from security context
+        cart.setUserId(1L);
         cart.setPaymentMethod(request.getPaymentMethod());
         cart.setStatus(Cart.CartStatus.OPEN);
         cart.setProducts(products);
