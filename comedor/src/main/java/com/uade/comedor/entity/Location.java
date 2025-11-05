@@ -13,6 +13,9 @@ public class Location {
     private String name;
 
     @Column(nullable = false)
+    private String address;
+
+    @Column(nullable = false)
     private Integer capacity; // capacidad máxima de asientos por hora
 
     // Getters and Setters
@@ -38,5 +41,13 @@ public class Location {
 
     public void setCapacity(Integer capacity) {
         this.capacity = capacity;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
     }
 }
