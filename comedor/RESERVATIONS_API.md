@@ -20,12 +20,14 @@ GET /locations
   {
     "id": 1,
     "name": "Norte",
-    "capacity": 10
+    "capacity": 10,
+    "address": "Avenida Norte 456"
   },
   {
     "id": 2,
     "name": "Sur",
-    "capacity": 10
+    "capacity": 10,
+    "address": "Calle Principal 123"
   }
 ]
 ```
@@ -47,7 +49,8 @@ GET /locations/1
 {
   "id": 1,
   "name": "Norte",
-  "capacity": 10
+  "capacity": 10,
+  "address": "Avenida Norte 456"
 }
 ```
 

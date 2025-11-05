@@ -39,12 +39,28 @@ public class LocationService {
             Location norte = new Location();
             norte.setName("Norte");
             norte.setCapacity(10);
+            norte.setAddress("Avenida Norte 456");
             locationRepository.save(norte);
 
             Location sur = new Location();
             sur.setName("Sur");
             sur.setCapacity(10);
+            sur.setAddress("Calle Principal 123");
             locationRepository.save(sur);
+        }
+
+        // Backfill de address para registros existentes sin address
+        for (Location loc : locationRepository.findAll()) {
+            if (loc.getAddress() == null || loc.getAddress().trim().isEmpty()) {
+                if ("Norte".equalsIgnoreCase(loc.getName())) {
+                    loc.setAddress("Avenida Norte 456");
+                } else if ("Sur".equalsIgnoreCase(loc.getName())) {
+                    loc.setAddress("Calle Principal 123");
+                } else {
+                    throw new IllegalStateException("Location sin address: id=" + loc.getId() + ", name=" + loc.getName());
+                }
+                locationRepository.save(loc);
+            }
         }
     }
 
