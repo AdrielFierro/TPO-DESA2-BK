@@ -48,6 +48,12 @@ public class ProductController {
 		
 		try {
 			logger.info("📦 Creando producto: {}", name);
+			logger.info("🔍 DEBUG - image parameter: {}", image);
+			logger.info("🔍 DEBUG - image == null: {}", (image == null));
+			if (image != null) {
+				logger.info("🔍 DEBUG - image.isEmpty(): {}", image.isEmpty());
+				logger.info("🔍 DEBUG - image.getSize(): {}", image.getSize());
+			}
 			
 			// Crear el producto
 			Product product = new Product();
@@ -75,7 +81,7 @@ public class ProductController {
 				logger.info("✅ Imagen subida exitosamente: {}", imageUrl);
 				product.setImageUrl(imageUrl);
 			} else {
-				logger.info("ℹ️ No se envió imagen");
+				logger.info("ℹ️ No se envió imagen (image is null or empty)");
 			}
 
 			// Guardar el producto
