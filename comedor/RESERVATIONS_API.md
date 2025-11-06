@@ -381,3 +381,189 @@ Cuando levantás la aplicación, se crean automáticamente 2 locations:
 - **Location 2 - Sur**: Capacidad 10 asientos/hora
 
 Ambas están disponibles para todos los meal times y slots.
+
+---
+
+## 📋 Changelog - Cambios Recientes
+
+### 2025-11-06 - Fix endpoint `/menus/now` y zona horaria
+
+#### Problema identificado
+El endpoint `GET /menus/now` lanzaba un error 500 con la excepción:
+```
+org.springframework.dao.IncorrectResultSizeDataAccessException: Query did not return a unique result: 10 results were returned
+```
+
+Esto ocurría porque la consulta `findByDays_Day(MenuDay.DayOfWeek day)` en `MenuRepository` retornaba múltiples menús que contenían el día de la semana solicitado (por ejemplo, múltiples menús con día "LUNES"), pero el método esperaba un único resultado.
+
+#### Cambios implementados
+
+**1. Nuevo método en `MenuRepository`:**
+```java
+@EntityGraph(attributePaths = {"days", "days.meals", "days.meals.products"})
+Optional<Menu> findTopByDays_DayOrderByLastModifiedDesc(MenuDay.DayOfWeek day);
+```
+
+Este método:
+- Busca todos los menús que contengan el día especificado
+- Los ordena por `lastModified` de forma descendente (el más reciente primero)
+- Retorna solo el primero (el más reciente)
+- Garantiza un resultado único o `Optional.empty()`
+
+**2. Actualización de `MenuService`:**
+
+Se reemplazaron todas las llamadas a `findByDays_Day(day)` por `findTopByDays_DayOrderByLastModifiedDesc(day)` en los siguientes métodos:
+- `getMenuByDay(MenuDay.DayOfWeek day)`
+- `getCurrentMenu()`
+- `getMenuByDayAndMealTime(MenuDay.DayOfWeek day, MenuMeal.MealTime mealTime)`
+- `updateDayMenu(MenuDay.DayOfWeek day, List<MenuMealCreateRequest> mealsRequest)`
+- `updateMealMenu(MenuDay.DayOfWeek day, MenuMeal.MealTime mealTime, List<Long> productIds)`
+
+**3. Zona horaria configurada:**
+
+Ya estaba implementada en `ComedorApplication.java`:
+```java
+@PostConstruct
+public void init() {
+    TimeZone.setDefault(TimeZone.getTimeZone("America/Argentina/Buenos_Aires"));
+}
+```
+
+Esto asegura que todas las operaciones con `LocalDateTime.now()` usen la hora de Argentina.
+
+#### Cómo funciona el endpoint `/menus/now`
+
+**Flujo completo:**
+
+1. **Obtiene la fecha y hora actual** usando la zona horaria de Argentina
+   ```java
+   LocalDateTime now = LocalDateTime.now(); // Ej: 2025-11-06 13:15:00 (hora Argentina)
+   ```
+
+2. **Determina el día de la semana actual**
+   ```java
+   java.time.DayOfWeek today = now.getDayOfWeek(); // Ej: WEDNESDAY
+   MenuDay.DayOfWeek menuDay = convertToMenuDay(today); // Convierte a: MIERCOLES
+   ```
+
+3. **Busca el menú más reciente para ese día**
+   ```java
+   Menu menu = menuRepository.findTopByDays_DayOrderByLastModifiedDesc(menuDay)
+   ```
+   - Si hay múltiples menús con día "MIERCOLES", toma el que tenga `lastModified` más reciente
+   - Si no encuentra ninguno, lanza `404 - No hay menú disponible por el momento`
+
+4. **Determina el turno de comida actual** basado en los horarios configurados
+   ```java
+   MenuMeal.MealTime currentMealTime = getCurrentMealTime(currentTime);
+   ```
+   - Consulta los horarios definidos en `MealTimeScheduleService`
+   - Ejemplo: Si son las 13:15, determina que es `ALMUERZO`
+   - Si está fuera de horario de comidas, lanza `404 - No hay menú disponible por el momento`
+
+5. **Filtra el menú del día para devolver solo el turno actual**
+   ```java
+   MenuMeal currentMeal = currentMenuDay.getMeals().stream()
+       .filter(m -> m.getMealTime().equals(currentMealTime))
+       .findFirst()
+       .orElseThrow(...)
+   ```
+
+6. **Devuelve el resultado** con el formato esperado:
+   ```json
+   {
+       "mealTime": "ALMUERZO",
+       "sections": {
+           "platos": [...],
+           "bebidas": [...],
+           "postres": [...]
+       }
+   }
+   ```
+
+#### Respuestas del endpoint
+
+**✅ Caso exitoso (200 OK):**
+- Hay menú configurado para el día actual
+- Estamos dentro del horario de un turno de comida (desayuno/almuerzo/merienda/cena)
+- Retorna el menú con productos agrupados por tipo
+
+**❌ Caso sin menú (404 NOT FOUND):**
+```json
+{
+  "timestamp": "2025-11-06T16:13:13.941Z",
+  "status": 404,
+  "error": "Not Found",
+  "message": "No hay menú disponible por el momento",
+  "path": "/menus/now"
+}
+```
+
+Esto ocurre cuando:
+- No existe un menú para el día actual en la base de datos
+- Es fin de semana (sábado/domingo) y no hay menús configurados
+- Estamos fuera del horario de comidas (ej: 3 AM, 10 PM)
+- Existe menú para el día pero no tiene configurado el turno actual
+
+#### Ejemplo de uso en Postman
+
+**Request:**
+```http
+GET http://localhost:8080/menus/now
+```
+
+**Response esperada (miércoles a las 13:00):**
+```json
+{
+    "mealTime": "ALMUERZO",
+    "sections": {
+        "platos": [
+            {
+                "id": 3,
+                "name": "Pizza",
+                "description": "",
+                "price": 10000.00,
+                "productType": "PLATO",
+                "imageUrl": ""
+            }
+        ],
+        "bebidas": [
+            {
+                "id": 9,
+                "name": "Coca Cola",
+                "description": "500 ml Gaseosa",
+                "price": 1500.00,
+                "productType": "BEBIDA",
+                "imageUrl": ""
+            }
+        ],
+        "postres": [
+            {
+                "id": 2,
+                "name": "Medialunas (3 unidades)",
+                "description": "3 medialunas dulces",
+                "price": 800.00,
+                "productType": "POSTRE",
+                "imageUrl": "https://example.com/medialunas.jpg"
+            }
+        ]
+    }
+}
+```
+
+#### Validaciones importantes
+
+1. **Múltiples menús para el mismo día**: El sistema ahora selecciona automáticamente el más reciente
+2. **Zona horaria**: Siempre usa hora de Argentina (UTC-3)
+3. **Horarios de comida**: Configurados en `MealTimeScheduleService`:
+   - DESAYUNO: 07:00 - 09:00
+   - ALMUERZO: 12:00 - 14:00
+   - MERIENDA: 16:00 - 18:00
+   - CENA: 20:00 - 22:00
+
+#### Archivos modificados
+
+- `comedor/src/main/java/com/uade/comedor/repository/MenuRepository.java`
+- `comedor/src/main/java/com/uade/comedor/service/MenuService.java`
+- `comedor/src/main/java/com/uade/comedor/ComedorApplication.java` (ya existía la config de timezone)
+
