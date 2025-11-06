@@ -3,6 +3,8 @@ package com.uade.comedor.service;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobHttpHeaders;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,6 +17,7 @@ import java.util.UUID;
  */
 @Service
 public class AzureBlobStorageService {
+    private static final Logger logger = LoggerFactory.getLogger(AzureBlobStorageService.class);
 
     @Autowired
     private BlobContainerClient blobContainerClient;
@@ -27,14 +30,20 @@ public class AzureBlobStorageService {
      * @throws IOException Si hay error al leer el archivo
      */
     public String uploadImage(MultipartFile file) throws IOException {
+        logger.info("🔵 Iniciando subida de imagen a Azure Blob Storage");
+        
         // Validar que el archivo no esté vacío
         if (file.isEmpty()) {
+            logger.error("❌ El archivo está vacío");
             throw new IllegalArgumentException("El archivo está vacío");
         }
 
         // Validar tipo de archivo (solo imágenes)
         String contentType = file.getContentType();
+        logger.info("📄 Content-Type recibido: {}", contentType);
+        
         if (contentType == null || !contentType.startsWith("image/")) {
+            logger.error("❌ Tipo de archivo inválido: {}", contentType);
             throw new IllegalArgumentException("El archivo debe ser una imagen");
         }
 
@@ -45,20 +54,31 @@ public class AzureBlobStorageService {
             extension = originalFilename.substring(originalFilename.lastIndexOf("."));
         }
         String blobName = UUID.randomUUID().toString() + extension;
+        logger.info("📝 Nombre del blob: {}", blobName);
 
-        // Obtener el cliente del blob
-        BlobClient blobClient = blobContainerClient.getBlobClient(blobName);
+        try {
+            // Obtener el cliente del blob
+            BlobClient blobClient = blobContainerClient.getBlobClient(blobName);
+            logger.info("🔗 Cliente del blob obtenido");
 
-        // Configurar headers HTTP para el blob
-        BlobHttpHeaders headers = new BlobHttpHeaders()
-                .setContentType(contentType);
+            // Configurar headers HTTP para el blob
+            BlobHttpHeaders headers = new BlobHttpHeaders()
+                    .setContentType(contentType);
 
-        // Subir el archivo
-        blobClient.upload(file.getInputStream(), file.getSize(), true);
-        blobClient.setHttpHeaders(headers);
+            // Subir el archivo
+            logger.info("⬆️ Subiendo archivo de {} bytes...", file.getSize());
+            blobClient.upload(file.getInputStream(), file.getSize(), true);
+            blobClient.setHttpHeaders(headers);
 
-        // Retornar la URL pública del blob
-        return blobClient.getBlobUrl();
+            // Retornar la URL pública del blob
+            String blobUrl = blobClient.getBlobUrl();
+            logger.info("✅ Imagen subida exitosamente: {}", blobUrl);
+            return blobUrl;
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al subir imagen a Azure: {}", e.getMessage(), e);
+            throw new IOException("Error al subir imagen a Azure: " + e.getMessage(), e);
+        }
     }
 
     /**

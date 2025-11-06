@@ -3,6 +3,8 @@ package com.uade.comedor.controller;
 import com.uade.comedor.entity.Product;
 import com.uade.comedor.service.AzureBlobStorageService;
 import com.uade.comedor.service.ProductService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +17,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/products")
 public class ProductController {
+	private static final Logger logger = LoggerFactory.getLogger(ProductController.class);
+	
 	@Autowired
 	private ProductService productService;
 
@@ -43,6 +47,8 @@ public class ProductController {
 			@RequestParam(value = "image", required = false) MultipartFile image) {
 		
 		try {
+			logger.info("📦 Creando producto: {}", name);
+			
 			// Crear el producto
 			Product product = new Product();
 			product.setName(name);
@@ -53,23 +59,36 @@ public class ProductController {
 
 			// Si se envió una imagen, subirla a Azure
 			if (image != null && !image.isEmpty()) {
+				logger.info("📸 Imagen recibida: {} - Tamaño: {} bytes - Tipo: {}", 
+					image.getOriginalFilename(), 
+					image.getSize(), 
+					image.getContentType());
+				
 				if (!azureBlobStorageService.isValidImage(image)) {
+					logger.error("❌ Imagen no válida: {}", image.getContentType());
 					return ResponseEntity.badRequest()
 							.body("El archivo debe ser una imagen válida (JPG, PNG, WEBP)");
 				}
 				
+				logger.info("⬆️ Subiendo imagen a Azure Blob Storage...");
 				String imageUrl = azureBlobStorageService.uploadImage(image);
+				logger.info("✅ Imagen subida exitosamente: {}", imageUrl);
 				product.setImageUrl(imageUrl);
+			} else {
+				logger.info("ℹ️ No se envió imagen");
 			}
 
 			// Guardar el producto
 			Product created = productService.create(product);
+			logger.info("✅ Producto creado con ID: {} - ImageURL: {}", created.getId(), created.getImageUrl());
 			return ResponseEntity.status(201).body(created);
 
 		} catch (IOException e) {
+			logger.error("❌ Error de IO al subir imagen: ", e);
 			return ResponseEntity.status(500)
 					.body("Error al subir la imagen: " + e.getMessage());
 		} catch (Exception e) {
+			logger.error("❌ Error al crear producto: ", e);
 			return ResponseEntity.status(500)
 					.body("Error al crear el producto: " + e.getMessage());
 		}
