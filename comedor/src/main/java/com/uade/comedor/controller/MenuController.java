@@ -32,6 +32,18 @@ public class MenuController {
         return ResponseEntity.ok(menuService.getCurrentMenu());
     }
 
+    /**
+     * Endpoint de demostración para desarrollo del frontend
+     * Permite simular cualquier día y turno de comida para testing
+     * 
+     * POST /menus/demo/now
+     * Body: { "day": "LUNES", "mealTime": "ALMUERZO" }
+     */
+    @PostMapping("/demo/now")
+    public ResponseEntity<DayMenuResponseDTO> getDemoMenu(@RequestBody DemoMenuRequest request) {
+        return ResponseEntity.ok(menuService.getDemoMenu(request.getDay(), request.getMealTime()));
+    }
+
     @GetMapping("/shift")
     public ResponseEntity<List<MealShiftDTO>> getMealShifts() {
         List<com.uade.comedor.dto.MealTimeScheduleDTO> schedules = scheduleService.getAllSchedules();

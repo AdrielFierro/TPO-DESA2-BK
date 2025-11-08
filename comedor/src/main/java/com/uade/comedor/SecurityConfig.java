@@ -22,24 +22,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) // desactiva CSRF para APIs REST
             .cors(Customizer.withDefaults()) // habilita CORS usando el bean corsConfigurationSource
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/ext/ping",
-                    "/swagger-ui/**",
-                    "/v3/api-docs/**",
-                    "/v3/api-docs.yaml",
-                    "/swagger-ui.html",
-                    "/sessions/**",
-                    "/products/**",
-                    "/reservations/**",
-                    "/menus/**",
-                    "/locations/**",
-                    "/actuator/**",
-                    "/bills/**",
-                    "/carts/**"
-                ).permitAll()
-                .anyRequest().authenticated()
-            )
-            .httpBasic(Customizer.withDefaults());
+                .anyRequest().permitAll() // PERMITE TODAS LAS PETICIONES SIN AUTENTICACIÓN
+            );
 
         return http.build();
     }

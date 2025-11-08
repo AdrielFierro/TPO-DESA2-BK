@@ -16,6 +16,9 @@ public interface MenuRepository extends JpaRepository<Menu, Long> {
     
     @EntityGraph(attributePaths = {"days", "days.meals", "days.meals.products"})
     Optional<Menu> findByDays_Day(MenuDay.DayOfWeek day);
+
+    @EntityGraph(attributePaths = {"days", "days.meals", "days.meals.products"})
+    Optional<Menu> findTopByDays_DayOrderByLastModifiedDesc(MenuDay.DayOfWeek day);
     
     boolean existsByDays_Day(MenuDay.DayOfWeek day);
     

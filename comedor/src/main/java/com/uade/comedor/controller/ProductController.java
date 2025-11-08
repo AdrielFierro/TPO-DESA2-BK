@@ -37,6 +37,22 @@ public class ProductController {
 				.orElse(ResponseEntity.notFound().build());
 	}
 
+	// Endpoint para crear producto con JSON (sin imagen)
+	@PostMapping(consumes = {"application/json"})
+	public ResponseEntity<?> createFromJson(@RequestBody Product product) {
+		try {
+			logger.info("📦 Creando producto desde JSON: {}", product.getName());
+			Product created = productService.create(product);
+			logger.info("✅ Producto creado con ID: {}", created.getId());
+			return ResponseEntity.status(201).body(created);
+		} catch (Exception e) {
+			logger.error("❌ Error al crear producto: ", e);
+			return ResponseEntity.status(500)
+					.body("Error al crear el producto: " + e.getMessage());
+		}
+	}
+
+	// Endpoint para crear producto con multipart (con imagen)
 	@PostMapping(consumes = {"multipart/form-data"})
 	public ResponseEntity<?> create(
 			@RequestParam("name") String name,
@@ -100,6 +116,25 @@ public class ProductController {
 		}
 	}
 
+	// Endpoint para actualizar producto con JSON (sin imagen)
+	@PatchMapping(value = "/{id}", consumes = {"application/json"})
+	public ResponseEntity<?> updateFromJson(@PathVariable Long id, @RequestBody Product product) {
+		try {
+			logger.info("📝 Actualizando producto {} desde JSON", id);
+			Product updated = productService.update(id, product).orElse(null);
+			if (updated == null) {
+				return ResponseEntity.notFound().build();
+			}
+			logger.info("✅ Producto actualizado: {}", updated.getId());
+			return ResponseEntity.ok(updated);
+		} catch (Exception e) {
+			logger.error("❌ Error al actualizar producto: ", e);
+			return ResponseEntity.status(500)
+					.body("Error al actualizar el producto: " + e.getMessage());
+		}
+	}
+
+	// Endpoint para actualizar producto con multipart (con imagen)
 	@PatchMapping(value = "/{id}", consumes = {"multipart/form-data"})
 	public ResponseEntity<?> update(
 			@PathVariable Long id,
