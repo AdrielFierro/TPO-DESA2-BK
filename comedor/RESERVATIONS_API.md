@@ -567,3 +567,174 @@ GET http://localhost:8080/menus/now
 - `comedor/src/main/java/com/uade/comedor/service/MenuService.java`
 - `comedor/src/main/java/com/uade/comedor/ComedorApplication.java` (ya existía la config de timezone)
 
+---
+
+### 2025-11-08 - Endpoint `/menus/demo/now` para desarrollo del frontend
+
+#### Problema/Necesidad
+Durante el desarrollo del frontend, el endpoint `/menus/now` solo funciona de lunes a viernes y dentro de los horarios de comida configurados. Esto dificulta el desarrollo en fines de semana o fuera de horario, ya que no se puede probar la funcionalidad sin datos reales.
+
+#### Solución implementada
+Se creó un nuevo endpoint **`POST /menus/demo/now`** que permite simular cualquier día de la semana y turno de comida sin validar la hora actual del sistema.
+
+#### Características del nuevo endpoint
+
+**Endpoint:** `POST /menus/demo/now`
+
+**Request Body (JSON):**
+```json
+{
+  "day": "LUNES",
+  "mealTime": "ALMUERZO"
+}
+```
+
+**Parámetros:**
+- `day` (requerido): Día de la semana
+  - Valores válidos: `LUNES`, `MARTES`, `MIERCOLES`, `JUEVES`, `VIERNES`
+- `mealTime` (requerido): Turno de comida
+  - Valores válidos: `DESAYUNO`, `ALMUERZO`, `MERIENDA`, `CENA`
+
+**Response (200 OK):**
+Mismo formato que `/menus/now`:
+```json
+{
+    "mealTime": "ALMUERZO",
+    "sections": {
+        "platos": [
+            {
+                "id": 3,
+                "name": "Pizza",
+                "description": "",
+                "price": 10000.00,
+                "productType": "PLATO",
+                "imageUrl": ""
+            }
+        ],
+        "bebidas": [
+            {
+                "id": 9,
+                "name": "Coca Cola",
+                "description": "500 ml Gaseosa",
+                "price": 1500.00,
+                "productType": "BEBIDA",
+                "imageUrl": ""
+            }
+        ],
+        "postres": [
+            {
+                "id": 2,
+                "name": "Medialunas (3 unidades)",
+                "description": "3 medialunas dulces",
+                "price": 800.00,
+                "productType": "POSTRE",
+                "imageUrl": "https://example.com/medialunas.jpg"
+            }
+        ]
+    }
+}
+```
+
+#### Ejemplos de uso en Postman
+
+**Ejemplo 1: Menú del almuerzo del lunes**
+```http
+POST http://localhost:8080/menus/demo/now
+Content-Type: application/json
+
+{
+  "day": "LUNES",
+  "mealTime": "ALMUERZO"
+}
+```
+
+**Ejemplo 2: Menú del desayuno del miércoles**
+```http
+POST http://localhost:8080/menus/demo/now
+Content-Type: application/json
+
+{
+  "day": "MIERCOLES",
+  "mealTime": "DESAYUNO"
+}
+```
+
+**Ejemplo 3: Menú de la cena del viernes**
+```http
+POST http://localhost:8080/menus/demo/now
+Content-Type: application/json
+
+{
+  "day": "VIERNES",
+  "mealTime": "CENA"
+}
+```
+
+#### Diferencias entre `/menus/now` y `/menus/demo/now`
+
+| Característica | `/menus/now` (GET) | `/menus/demo/now` (POST) |
+|----------------|-------------------|-------------------------|
+| **Método HTTP** | GET | POST |
+| **Parámetros** | Ninguno | `day` y `mealTime` en body |
+| **Validación de hora** | ✅ Sí (solo horarios de comida) | ❌ No (siempre disponible) |
+| **Validación de día** | ✅ Sí (solo lun-vie) | ❌ No (acepta cualquier día) |
+| **Uso** | Producción | Desarrollo/Testing |
+| **Output** | Menú actual según hora del sistema | Menú simulado según parámetros |
+
+#### Casos de error (404 NOT FOUND)
+
+```json
+{
+  "timestamp": "2025-11-08T13:11:56.941Z",
+  "status": 404,
+  "error": "Not Found",
+  "message": "No hay menú disponible por el momento",
+  "path": "/menus/demo/now"
+}
+```
+
+Este error ocurre cuando:
+- No existe un menú configurado para el día especificado
+- El menú del día existe pero no tiene configurado el turno de comida especificado
+
+#### Plan de migración para producción
+
+Para la entrega final, el frontend debe:
+
+1. **Durante desarrollo** (ahora):
+   ```javascript
+   // Usar endpoint demo con parámetros simulados
+   const response = await fetch('/menus/demo/now', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({ 
+       day: 'LUNES', 
+       mealTime: 'ALMUERZO' 
+     })
+   });
+   ```
+
+2. **Para producción** (entrega final):
+   ```javascript
+   // Cambiar a endpoint real sin parámetros
+   const response = await fetch('/menus/now', {
+     method: 'GET'
+   });
+   ```
+
+El formato de respuesta es idéntico, por lo que no se requieren cambios en el código de procesamiento de datos.
+
+#### Archivos creados/modificados
+
+- **Nuevo:** `comedor/src/main/java/com/uade/comedor/dto/DemoMenuRequest.java`
+- **Modificado:** `comedor/src/main/java/com/uade/comedor/controller/MenuController.java`
+- **Modificado:** `comedor/src/main/java/com/uade/comedor/service/MenuService.java`
+
+#### Notas importantes
+
+⚠️ **Este endpoint es solo para desarrollo.** En producción, se recomienda:
+- Usar `/menus/now` que valida día y horario real
+- O bien deshabilitar `/menus/demo/now` en el ambiente de producción mediante configuración
+
+✅ **El endpoint `/menus/now` original NO fue modificado** y mantiene su comportamiento correcto de validación de día y horario.
+

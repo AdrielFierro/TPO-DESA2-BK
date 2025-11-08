@@ -106,9 +106,9 @@ public class MenuService {
         }
 
         // Buscar el menú del día
-    Menu menu = menuRepository.findTopByDays_DayOrderByLastModifiedDesc(menuDay)
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
-            "No hay menú disponible por el momento"));
+        Menu menu = menuRepository.findTopByDays_DayOrderByLastModifiedDesc(menuDay)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                    "No hay menú disponible por el momento"));
         
         MenuDay currentMenuDay = menu.getDays().stream()
             .filter(d -> d.getDay().equals(menuDay))
@@ -140,8 +140,44 @@ public class MenuService {
         
         return response;
     }
-    
+
     /**
+     * Endpoint de demostración para desarrollo del frontend
+     * Permite simular cualquier día y turno de comida sin validar hora actual
+     * 
+     * @param day Día de la semana (LUNES, MARTES, MIERCOLES, JUEVES, VIERNES)
+     * @param mealTime Turno de comida (DESAYUNO, ALMUERZO, MERIENDA, CENA)
+     * @return Menú del día y turno especificados (mismo formato que /menus/now)
+     */
+    @Transactional
+    public DayMenuResponseDTO getDemoMenu(MenuDay.DayOfWeek day, MenuMeal.MealTime mealTime) {
+        // Buscar el menú del día especificado
+        Menu menu = menuRepository.findTopByDays_DayOrderByLastModifiedDesc(day)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                    "No hay menú disponible por el momento"));
+        
+        MenuDay menuDay = menu.getDays().stream()
+            .filter(d -> d.getDay().equals(day))
+            .findFirst()
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                "No hay menú disponible por el momento"));
+        
+        // Filtrar solo el meal del turno especificado
+        MenuMeal meal = menuDay.getMeals().stream()
+            .filter(m -> m.getMealTime().equals(mealTime))
+            .findFirst()
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                "No hay menú disponible por el momento para el turno especificado"));
+        
+        // Crear un response con solo el meal especificado
+        DayMenuResponseDTO response = menuDTOMapper.convertDayToResponseDTO(menuDay);
+        
+        // Filtrar para devolver solo el meal del turno especificado
+        response.getMeals().removeIf(m -> 
+            !m.getMealTime().equalsIgnoreCase(mealTime.name()));
+        
+        return response;
+    }    /**
      * Determina el turno de comida actual basado en la hora del sistema
      */
     private MenuMeal.MealTime getCurrentMealTime(LocalTime currentTime) {
