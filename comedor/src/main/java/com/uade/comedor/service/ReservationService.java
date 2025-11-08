@@ -62,6 +62,23 @@ public class ReservationService {
         LocalDateTime slotStart = request.getReservationDate().toLocalDate().atTime(targetSlot.getStartTime());
         LocalDateTime slotEnd = request.getReservationDate().toLocalDate().atTime(targetSlot.getEndTime());
         
+        // Verificar si el usuario ya tiene una reserva en este slot
+        long userExistingReservations = reservationRepository.countByUserIdAndMealTimeAndReservationDateBetween(
+            request.getUserId(),
+            request.getMealTime(),
+            slotStart,
+            slotEnd
+        );
+        
+        if (userExistingReservations > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, 
+                String.format("Ya tienes una reserva para %s entre %s y %s el %s. Solo puedes tener una reserva por bloque horario.",
+                    request.getMealTime(),
+                    targetSlot.getStartTime(),
+                    targetSlot.getEndTime(),
+                    request.getReservationDate().toLocalDate()));
+        }
+        
         long existingReservations = reservationRepository.countByLocationIdAndMealTimeAndReservationDateBetween(
             request.getLocationId(),
             request.getMealTime(),
