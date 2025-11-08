@@ -34,4 +34,39 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @Param("mealTime") MenuMeal.MealTime mealTime,
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime);
+    
+    // Query para obtener reservas activas y recientes
+    // Muestra: ACTIVA, CONFIRMADA (sin límite de tiempo)
+    // Muestra: AUSENTE de los últimos 2 días
+    // NO muestra: CANCELADA
+    // Ordenadas: Primero ACTIVA, luego CONFIRMADA, luego AUSENTE; dentro de cada grupo de más nueva a más vieja
+    @Query("SELECT r FROM Reservation r WHERE r.userId = :userId " +
+           "AND (r.status = 'ACTIVA' OR r.status = 'CONFIRMADA' OR " +
+           "(r.status = 'AUSENTE' AND r.reservationDate >= :twoDaysAgo)) " +
+           "ORDER BY " +
+           "CASE r.status " +
+           "  WHEN 'ACTIVA' THEN 1 " +
+           "  WHEN 'CONFIRMADA' THEN 2 " +
+           "  WHEN 'AUSENTE' THEN 3 " +
+           "  ELSE 4 " +
+           "END, " +
+           "r.reservationDate DESC")
+    List<Reservation> findActiveAndRecentByUserId(@Param("userId") Long userId, 
+                                                   @Param("twoDaysAgo") LocalDateTime twoDaysAgo);
+    
+    // Query para obtener reservas de un usuario entre dos fechas
+    @Query("SELECT r FROM Reservation r WHERE r.userId = :userId " +
+           "AND r.reservationDate >= :startDate " +
+           "AND r.reservationDate <= :endDate " +
+           "ORDER BY r.reservationDate DESC")
+    List<Reservation> findByUserIdAndDateBetween(@Param("userId") Long userId,
+                                                   @Param("startDate") LocalDateTime startDate,
+                                                   @Param("endDate") LocalDateTime endDate);
+    
+    // Query para obtener todas las reservas entre dos fechas
+    @Query("SELECT r FROM Reservation r WHERE r.reservationDate >= :startDate " +
+           "AND r.reservationDate <= :endDate " +
+           "ORDER BY r.reservationDate DESC")
+    List<Reservation> findByDateBetween(@Param("startDate") LocalDateTime startDate,
+                                         @Param("endDate") LocalDateTime endDate);
 }

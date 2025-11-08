@@ -155,4 +155,32 @@ public class ReservationService {
                 .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
         return r.getCost();
     }
+    
+    /**
+     * Obtiene las reservas de un usuario:
+     * - Todas las ACTIVAS y CONFIRMADAS (sin límite de tiempo)
+     * - AUSENTES de los últimos 2 días
+     * - NO muestra CANCELADAS
+     * 
+     * Nota: Las reservas ACTIVAS vencidas se marcan como AUSENTE automáticamente
+     * por una tarea programada que se ejecuta cada 15 minutos
+     */
+    public List<Reservation> getActiveAndRecentReservationsByUser(Long userId) {
+        LocalDateTime twoDaysAgo = LocalDateTime.now().minusDays(2);
+        return reservationRepository.findActiveAndRecentByUserId(userId, twoDaysAgo);
+    }
+    
+    /**
+     * Obtiene las reservas de un usuario entre dos fechas
+     */
+    public List<Reservation> getReservationsByUserAndDateRange(Long userId, LocalDateTime startDate, LocalDateTime endDate) {
+        return reservationRepository.findByUserIdAndDateBetween(userId, startDate, endDate);
+    }
+    
+    /**
+     * Obtiene todas las reservas de todos los usuarios entre dos fechas
+     */
+    public List<Reservation> getAllReservationsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
+        return reservationRepository.findByDateBetween(startDate, endDate);
+    }
 }

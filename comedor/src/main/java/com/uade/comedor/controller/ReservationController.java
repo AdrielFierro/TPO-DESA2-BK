@@ -1,15 +1,20 @@
 package com.uade.comedor.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.uade.comedor.service.ReservationService;
 import com.uade.comedor.entity.Reservation;
 import com.uade.comedor.dto.CreateReservationRequest;
+import com.uade.comedor.dto.ReservationDateRangeRequest;
 
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.TimeZone;
 
 @RestController
 @RequestMapping("/reservations")
@@ -31,9 +36,32 @@ public class ReservationController {
     }
 
     // GET /reservations/mine?userId=...
+    // Modificado para devolver solo reservas activas y recientes (últimos 2 días)
     @GetMapping("/mine")
     public ResponseEntity<List<Reservation>> getMyReservations(@RequestParam Long userId) {
-        List<Reservation> reservations = reservationService.getReservationsByUser(userId);
+        List<Reservation> reservations = reservationService.getActiveAndRecentReservationsByUser(userId);
+        return ResponseEntity.ok(reservations);
+    }
+    
+    // POST /reservations/mine - Buscar reservas de un usuario entre dos fechas
+    @PostMapping("/mine")
+    public ResponseEntity<List<Reservation>> searchMyReservationsByDateRange(
+            @RequestBody ReservationDateRangeRequest request) {
+        List<Reservation> reservations = reservationService.getReservationsByUserAndDateRange(
+            request.getUserId(), 
+            request.getStartDate(), 
+            request.getEndDate()
+        );
+        return ResponseEntity.ok(reservations);
+    }
+    
+    // GET /reservations/range?startDate=...&endDate=...
+    // Obtener todas las reservas de todos los usuarios entre dos fechas
+    @GetMapping("/range")
+    public ResponseEntity<List<Reservation>> getAllReservationsByDateRange(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+        List<Reservation> reservations = reservationService.getAllReservationsByDateRange(startDate, endDate);
         return ResponseEntity.ok(reservations);
     }
 
@@ -81,5 +109,15 @@ public class ReservationController {
         } catch (IllegalStateException e) {
             return ResponseEntity.status(409).build();
         }
+    }
+    
+    // GET /reservations/test/timezone - Endpoint de prueba para verificar zona horaria
+    @GetMapping("/test/timezone")
+    public ResponseEntity<Map<String, String>> getTimezone() {
+        Map<String, String> response = new HashMap<>();
+        response.put("currentTime", LocalDateTime.now().toString());
+        response.put("timezone", TimeZone.getDefault().getID());
+        response.put("message", "Hora actual del servidor");
+        return ResponseEntity.ok(response);
     }
 }
