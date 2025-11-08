@@ -39,7 +39,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     // Muestra: ACTIVA, CONFIRMADA (sin límite de tiempo)
     // Muestra: AUSENTE de los últimos 2 días
     // NO muestra: CANCELADA
-    // Ordenadas: Primero ACTIVA, luego CONFIRMADA, luego AUSENTE; dentro de cada grupo de más nueva a más vieja
+    // Ordenadas: Primero ACTIVA (más temprana primero), luego CONFIRMADA (más reciente primero), luego AUSENTE (más reciente primero)
     @Query("SELECT r FROM Reservation r WHERE r.userId = :userId " +
            "AND (r.status = 'ACTIVA' OR r.status = 'CONFIRMADA' OR " +
            "(r.status = 'AUSENTE' AND r.reservationDate >= :twoDaysAgo)) " +
@@ -50,7 +50,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "  WHEN 'AUSENTE' THEN 3 " +
            "  ELSE 4 " +
            "END, " +
-           "r.reservationDate DESC")
+           "CASE WHEN r.status = 'ACTIVA' THEN r.reservationDate END ASC, " +
+           "CASE WHEN r.status <> 'ACTIVA' THEN r.reservationDate END DESC")
     List<Reservation> findActiveAndRecentByUserId(@Param("userId") Long userId, 
                                                    @Param("twoDaysAgo") LocalDateTime twoDaysAgo);
     
@@ -69,4 +70,16 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "ORDER BY r.reservationDate DESC")
     List<Reservation> findByDateBetween(@Param("startDate") LocalDateTime startDate,
                                          @Param("endDate") LocalDateTime endDate);
+    
+    // Query para verificar si un usuario ya tiene una reserva en un slot específico
+    @Query("SELECT COUNT(r) FROM Reservation r WHERE r.userId = :userId " +
+           "AND r.mealTime = :mealTime " +
+           "AND r.reservationDate >= :startTime " +
+           "AND r.reservationDate < :endTime " +
+           "AND r.status <> 'CANCELADA'")
+    long countByUserIdAndMealTimeAndReservationDateBetween(
+            @Param("userId") Long userId,
+            @Param("mealTime") MenuMeal.MealTime mealTime,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime);
 }
