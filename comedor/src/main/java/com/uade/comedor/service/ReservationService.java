@@ -31,6 +31,14 @@ public class ReservationService {
     public Reservation createReservation(CreateReservationRequest request) {
         LocalTime reservationTime = request.getReservationDate().toLocalTime();
         
+        // Validar que la fecha de la reserva no sea en el pasado
+        LocalDateTime now = LocalDateTime.now();
+        if (request.getReservationDate().isBefore(now)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                String.format("No puedes crear una reserva para una fecha pasada. Fecha solicitada: %s. Fecha/hora actual: %s",
+                    request.getReservationDate(), now));
+        }
+        
         // Calcular los slots disponibles para el mealTime
         List<MealTimeScheduleService.TimeSlot> timeSlots = scheduleService.calculateTimeSlots(request.getMealTime());
         
@@ -156,13 +164,32 @@ public class ReservationService {
     public Reservation confirmReservation(Long id) {
         Reservation r = reservationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
+        
         if (r.getStatus() == Reservation.ReservationStatus.CANCELADA) {
             throw new IllegalStateException("Cannot confirm a cancelled reservation");
         }
+        
         if (r.getStatus() == Reservation.ReservationStatus.CONFIRMADA) {
             // already confirmed
             return r;
         }
+        
+        // Validar que la confirmación se haga dentro de la ventana de tiempo permitida
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime reservationTime = r.getReservationDate();
+        LocalDateTime earliestConfirmTime = reservationTime.minusMinutes(20);
+        LocalDateTime latestConfirmTime = reservationTime.plusMinutes(20);
+        
+        if (now.isBefore(earliestConfirmTime) || now.isAfter(latestConfirmTime)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                String.format("Solo puedes confirmar la reserva entre 20 minutos antes y 20 minutos después del horario reservado. " +
+                             "Horario de reserva: %s. Ventana de confirmación: %s a %s. Hora actual: %s",
+                             reservationTime,
+                             earliestConfirmTime,
+                             latestConfirmTime,
+                             now));
+        }
+        
         r.setStatus(Reservation.ReservationStatus.CONFIRMADA);
         return reservationRepository.save(r);
     }
