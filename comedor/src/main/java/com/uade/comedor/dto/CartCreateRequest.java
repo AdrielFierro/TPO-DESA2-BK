@@ -7,6 +7,7 @@ public class CartCreateRequest {
     private Cart.PaymentMethod paymentMethod;
     private List<Long> cart;
     private Long reservationId; // Opcional: ID de la reserva para aplicar descuento
+    private Long billId; // Opcional: asociar este carrito a una factura existente (no reaplica descuentos)
 
     // Getters and Setters
     public Cart.PaymentMethod getPaymentMethod() {
@@ -31,5 +32,13 @@ public class CartCreateRequest {
 
     public void setReservationId(Long reservationId) {
         this.reservationId = reservationId;
+    }
+
+    public Long getBillId() {
+        return billId;
+    }
+
+    public void setBillId(Long billId) {
+        this.billId = billId;
     }
 }

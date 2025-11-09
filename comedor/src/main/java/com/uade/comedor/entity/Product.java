@@ -23,7 +23,8 @@ public class Product {
     @Column(nullable = false)
     private ProductType productType;
 
-    @Column
+    @Lob
+    @Column(columnDefinition = "MEDIUMTEXT")
     private String imageUrl;
 
     @Column(nullable = false)
