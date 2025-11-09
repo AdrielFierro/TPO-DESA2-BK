@@ -3,6 +3,7 @@ package com.uade.comedor.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "reservations")
@@ -37,7 +38,13 @@ public class Reservation {
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
+ 
+    // Campos explícitos para que el frontend siempre reciba el horario del slot
+    @Column(nullable = true)
+    private LocalTime slotStartTime;
 
+    @Column(nullable = true)
+    private LocalTime slotEndTime;
     public enum ReservationStatus {
         ACTIVA, CONFIRMADA, CANCELADA, AUSENTE
     }
@@ -113,5 +120,21 @@ public class Reservation {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public LocalTime getSlotStartTime() {
+        return slotStartTime;
+    }
+
+    public void setSlotStartTime(LocalTime slotStartTime) {
+        this.slotStartTime = slotStartTime;
+    }
+
+    public LocalTime getSlotEndTime() {
+        return slotEndTime;
+    }
+
+    public void setSlotEndTime(LocalTime slotEndTime) {
+        this.slotEndTime = slotEndTime;
     }
 }
