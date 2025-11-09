@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface BillRepository extends JpaRepository<Bill, Long> {
     List<Bill> findByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
+    boolean existsByReservationId(Long reservationId);
 }

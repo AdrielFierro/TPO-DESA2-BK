@@ -25,6 +25,12 @@ public class Bill {
     private BigDecimal subtotal;
 
     @Column(nullable = false)
+    private BigDecimal totalWithDiscount;
+
+    @Column(nullable = false)
+    private BigDecimal totalWithoutDiscount;
+
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     @ManyToMany
@@ -66,6 +72,22 @@ public class Bill {
 
     public void setSubtotal(BigDecimal subtotal) {
         this.subtotal = subtotal;
+    }
+
+    public BigDecimal getTotalWithDiscount() {
+        return totalWithDiscount;
+    }
+
+    public void setTotalWithDiscount(BigDecimal totalWithDiscount) {
+        this.totalWithDiscount = totalWithDiscount;
+    }
+
+    public BigDecimal getTotalWithoutDiscount() {
+        return totalWithoutDiscount;
+    }
+
+    public void setTotalWithoutDiscount(BigDecimal totalWithoutDiscount) {
+        this.totalWithoutDiscount = totalWithoutDiscount;
     }
 
     public LocalDateTime getCreatedAt() {

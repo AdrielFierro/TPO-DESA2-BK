@@ -19,6 +19,16 @@ public class BillService {
         this.billRepository = billRepository;
     }
 
+    public Bill getBillById(Long id) {
+        return billRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
+    }
+
+    public boolean isReservationUsed(Long reservationId) {
+        if (reservationId == null) return false;
+        return billRepository.existsByReservationId(reservationId);
+    }
+
     public List<Bill> getBills(LocalDateTime startDate, LocalDateTime endDate) {
         if (startDate != null && endDate != null) {
             if (startDate.isAfter(endDate)) {
@@ -34,11 +44,27 @@ public class BillService {
         Bill bill = new Bill();
         bill.setUserId(cart.getUserId());
         bill.setCartId(cart.getId());
-        bill.setReservationId(cart.getReservationId()); // Asociar reserva si existe
-        bill.setSubtotal(cart.getTotal()); // Total ya tiene el descuento aplicado
+        // Calculamos totals: original (sin descuento) y final (con descuento ya aplicado en cart.total)
+        java.math.BigDecimal discount = cart.getReservationDiscount() == null ? java.math.BigDecimal.ZERO : cart.getReservationDiscount();
+        java.math.BigDecimal finalTotal = cart.getTotal() == null ? java.math.BigDecimal.ZERO : cart.getTotal();
+        java.math.BigDecimal originalTotal = finalTotal.add(discount);
+
+        // Asociar reserva si existe y no fue usada ya en otra factura
+        if (cart.getReservationId() != null && !isReservationUsed(cart.getReservationId())) {
+            bill.setReservationId(cart.getReservationId());
+        } else {
+            bill.setReservationId(null);
+        }
+
+        // Guardar totales
+        bill.setTotalWithDiscount(finalTotal);
+        bill.setTotalWithoutDiscount(originalTotal);
+        // Mantener 'subtotal' por compatibilidad (usamos subtotal = totalWithDiscount)
+        bill.setSubtotal(finalTotal);
+
         bill.setCreatedAt(LocalDateTime.now());
         bill.setProducts(new java.util.ArrayList<>(cart.getProducts()));
-        
+
         return billRepository.save(bill);
     }
 }

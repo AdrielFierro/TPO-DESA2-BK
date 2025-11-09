@@ -25,7 +25,7 @@ public class CartService {
     private final ProductRepository productRepository;
     private final BillService billService;
     private final ReservationRepository reservationRepository;
-
+    
     public CartService(CartRepository cartRepository, ProductRepository productRepository, 
                       BillService billService, ReservationRepository reservationRepository) {
         this.cartRepository = cartRepository;
@@ -33,6 +33,7 @@ public class CartService {
         this.billService = billService;
         this.reservationRepository = reservationRepository;
     }
+    
 
     @Transactional
     public Cart createCart(CartCreateRequest request) {
@@ -40,50 +41,67 @@ public class CartService {
         BigDecimal subtotal = calculateTotal(products);
         BigDecimal discount = BigDecimal.ZERO;
         Long reservationId = null;
-        
-        // Si se proporciona una reserva, validar y calcular descuento
-        if (request.getReservationId() != null) {
-            Reservation reservation = reservationRepository.findById(request.getReservationId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+        // If a billId is provided and that bill already has a reservation associated,
+        // do not reapply reservation discounts.
+        boolean skipReservationDiscount = false;
+        if (request.getBillId() != null) {
+            try {
+                com.uade.comedor.entity.Bill existing = billService.getBillById(request.getBillId());
+                if (existing.getReservationId() != null) {
+                    skipReservationDiscount = true;
+                    // If request didn't include a reservationId, inherit from existing bill
+                    if (request.getReservationId() == null) {
+                        reservationId = existing.getReservationId();
+                    }
+                }
+            } catch (Exception e) {
+                // if bill not found, ignore and allow normal behavior (will error later if used)
+            }
+        }
+    // Determinar reserva efectiva (puede venir en request o heredarse desde la factura existente)
+    Long effectiveReservationId = request.getReservationId() != null ? request.getReservationId() : reservationId;
+
+    // Si hay una reserva efectiva, validar y calcular descuento (permitir crear carrito aunque descuento ya fue usada)
+    if (effectiveReservationId != null) {
+            Reservation reservation = reservationRepository.findById(effectiveReservationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Reserva no encontrada"));
-            
+
             // Validar estado de la reserva
             if (reservation.getStatus() == Reservation.ReservationStatus.CANCELADA) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "No puedes usar una reserva CANCELADA para obtener descuento");
             }
-            
+
             if (reservation.getStatus() == Reservation.ReservationStatus.AUSENTE) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "No puedes usar una reserva AUSENTE para obtener descuento");
             }
-            
+
             // Validar ventana de 24 horas
             LocalDateTime now = LocalDateTime.now();
             LocalDateTime reservationTime = reservation.getReservationDate();
             Duration timeDiff = Duration.between(reservationTime, now);
             long hoursDiff = Math.abs(timeDiff.toHours());
-            
+
             if (hoursDiff > 24) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     String.format("Solo puedes usar el descuento de la reserva dentro de las 24 horas. " +
                                  "Reserva: %s. Hora actual: %s. Diferencia: %d horas",
                                  reservationTime, now, hoursDiff));
             }
-            
-            // Validar que la reserva aún tenga descuento disponible (cost > 0)
-            if (reservation.getCost().compareTo(BigDecimal.ZERO) == 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Esta reserva ya fue utilizada para obtener un descuento. Solo puedes usar el descuento una vez.");
+
+            // Determinar si la reserva ya fue usada en otra factura o si se pidió explícitamente skip por billId
+            boolean used = billService.isReservationUsed(reservation.getId()) || skipReservationDiscount;
+            if (used) {
+                // Permitimos crear el carrito pero sin descuento
+                discount = BigDecimal.ZERO;
+                reservationId = reservation.getId();
+            } else {
+                // Aplicar descuento normalmente (no marcamos la reserva como "usada" aquí)
+                discount = reservation.getCost();
+                reservationId = reservation.getId();
             }
-            
-            // Aplicar descuento
-            discount = reservation.getCost();
-            reservationId = reservation.getId();
-            
-            // Marcar la reserva como usada (cost = 0) para que no se pueda reutilizar
-            reservation.setCost(BigDecimal.ZERO);
-            reservationRepository.save(reservation);
         }
         
         // Crear carrito
@@ -92,6 +110,8 @@ public class CartService {
         cart.setPaymentMethod(request.getPaymentMethod());
         cart.setStatus(Cart.CartStatus.OPEN);
         cart.setProducts(products);
+    // Asociar a factura si se pidió
+    cart.setBillId(request.getBillId());
         cart.setReservationId(reservationId);
         cart.setReservationDiscount(discount);
         cart.setTotal(subtotal.subtract(discount)); // Total = Subtotal - Descuento
@@ -161,6 +181,19 @@ public class CartService {
             if (reservation.getStatus() != Reservation.ReservationStatus.CONFIRMADA) {
                 reservation.setStatus(Reservation.ReservationStatus.CONFIRMADA);
                 reservationRepository.save(reservation);
+            }
+        }
+
+        // Si el carrito ya está ligado a una factura existing, retornamos dicha factura
+        if (cart.getBillId() != null) {
+            try {
+                Bill existingBill = billService.getBillById(cart.getBillId());
+                // marcar carrito como confirmado y devolver la factura existente (no reaplicar descuentos)
+                cart.setStatus(Cart.CartStatus.CONFIRMED);
+                cartRepository.save(cart);
+                return existingBill;
+            } catch (Exception e) {
+                // si la factura no existe por alguna razón, continuamos y creamos una nueva
             }
         }
 
