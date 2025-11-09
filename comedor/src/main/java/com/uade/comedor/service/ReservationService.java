@@ -108,18 +108,22 @@ public class ReservationService {
         // Determinar el MealTimeSlot enum basado en el slot calculado (para compatibilidad)
         MealTimeSlot timeSlotEnum = determineTimeSlotEnum(request.getMealTime(), targetSlot.getStartTime());
 
-        // Crear reserva
-        Reservation reservation = new Reservation();
-        reservation.setUserId(request.getUserId());
-        reservation.setLocationId(request.getLocationId());
-        reservation.setMealTime(request.getMealTime());
-        reservation.setReservationTimeSlot(timeSlotEnum);
-        reservation.setReservationDate(request.getReservationDate());
-        reservation.setStatus(Reservation.ReservationStatus.ACTIVA);
-        reservation.setCost(externalApiService.getReservationCost());
-        reservation.setCreatedAt(LocalDateTime.now());
+    // Crear reserva
+    Reservation reservation = new Reservation();
+    reservation.setUserId(request.getUserId());
+    reservation.setLocationId(request.getLocationId());
+    reservation.setMealTime(request.getMealTime());
+    reservation.setReservationTimeSlot(timeSlotEnum);
+    reservation.setReservationDate(request.getReservationDate());
+    reservation.setStatus(Reservation.ReservationStatus.ACTIVA);
+    reservation.setCost(externalApiService.getReservationCost());
+    reservation.setCreatedAt(LocalDateTime.now());
         
-        return reservationRepository.save(reservation);
+    // Guardar horarios explícitos del slot para el frontend
+    reservation.setSlotStartTime(targetSlot.getStartTime());
+    reservation.setSlotEndTime(targetSlot.getEndTime());
+        
+    return reservationRepository.save(reservation);
     }
     
     // Método helper para determinar el enum MealTimeSlot basado en mealTime y hora de inicio
@@ -147,17 +151,23 @@ public class ReservationService {
 
     // Get all reservations
     public List<Reservation> getAllReservations() {
-        return reservationRepository.findAll();
+        List<Reservation> list = reservationRepository.findAll();
+        list.forEach(this::populateSlotTimes);
+        return list;
     }
 
     // Get reservations for a specific user
     public List<Reservation> getReservationsByUser(Long userId) {
-        return reservationRepository.findByUserId(userId);
+        List<Reservation> list = reservationRepository.findByUserId(userId);
+        list.forEach(this::populateSlotTimes);
+        return list;
     }
 
     public Reservation getReservationById(Long id) {
-        return reservationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
+    Reservation r = reservationRepository.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
+    populateSlotTimes(r);
+    return r;
     }
 
     public Reservation cancelReservation(Long id) {
@@ -217,20 +227,57 @@ public class ReservationService {
      */
     public List<Reservation> getActiveAndRecentReservationsByUser(Long userId) {
         LocalDateTime twoDaysAgo = LocalDateTime.now().minusDays(2);
-        return reservationRepository.findActiveAndRecentByUserId(userId, twoDaysAgo);
+        List<Reservation> list = reservationRepository.findActiveAndRecentByUserId(userId, twoDaysAgo);
+        list.forEach(this::populateSlotTimes);
+        return list;
     }
     
     /**
      * Obtiene las reservas de un usuario entre dos fechas
      */
     public List<Reservation> getReservationsByUserAndDateRange(Long userId, LocalDateTime startDate, LocalDateTime endDate) {
-        return reservationRepository.findByUserIdAndDateBetween(userId, startDate, endDate);
+        List<Reservation> list = reservationRepository.findByUserIdAndDateBetween(userId, startDate, endDate);
+        list.forEach(this::populateSlotTimes);
+        return list;
     }
     
     /**
      * Obtiene todas las reservas de todos los usuarios entre dos fechas
      */
     public List<Reservation> getAllReservationsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
-        return reservationRepository.findByDateBetween(startDate, endDate);
+        List<Reservation> list = reservationRepository.findByDateBetween(startDate, endDate);
+        list.forEach(this::populateSlotTimes);
+        return list;
+    }
+
+    // Helper: asegura que slotStartTime/slotEndTime estén poblados en la entidad
+    private void populateSlotTimes(Reservation r) {
+        if (r == null) return;
+
+        // Intentar derivar siempre desde el schedule usando la hora de reservationDate
+        try {
+            List<MealTimeScheduleService.TimeSlot> slots = scheduleService.calculateTimeSlots(r.getMealTime());
+            java.time.LocalTime time = r.getReservationDate().toLocalTime();
+            for (MealTimeScheduleService.TimeSlot s : slots) {
+                if (s.getStartTime().equals(time)) {
+                    r.setSlotStartTime(s.getStartTime());
+                    r.setSlotEndTime(s.getEndTime());
+                    return;
+                }
+            }
+        } catch (Exception e) {
+            // si falla, intentaremos con el enum o con los valores almacenados
+        }
+
+        // Si no se pudo derivar del schedule, usar reservationTimeSlot (enum) si existe
+        MealTimeSlot enumSlot = r.getReservationTimeSlot();
+        if (enumSlot != null) {
+            r.setSlotStartTime(enumSlot.getStartTime());
+            r.setSlotEndTime(enumSlot.getEndTime());
+            return;
+        }
+
+        // Finalmente, si hay valores almacenados en la entidad, mantenerlos (no sobrescribir)
+        // Si tampoco existen, quedarán como null
     }
 }
