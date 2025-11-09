@@ -98,7 +98,9 @@ public class ReservationController {
         }
     }
 
-    // POST /reservations/confirmation/{id}
+    // Endpoint deshabilitado: Las reservas se confirman automáticamente al confirmar un carrito
+    // que tenga la reserva asociada
+    /*
     @PostMapping("/confirmation/{id}")
     public ResponseEntity<Reservation> confirm(@PathVariable Long id) {
         try {
@@ -110,6 +112,7 @@ public class ReservationController {
             return ResponseEntity.status(409).build();
         }
     }
+    */
     
     // GET /reservations/test/timezone - Endpoint de prueba para verificar zona horaria
     @GetMapping("/test/timezone")

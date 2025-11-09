@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -110,11 +112,41 @@ public class MealTimeScheduleService {
         LocalTime endTime = schedule.getEndTime();
         int slotDuration = schedule.getSlotDurationMinutes();
         
-        while (currentStart.plusMinutes(slotDuration).isBefore(endTime) || 
-               currentStart.plusMinutes(slotDuration).equals(endTime)) {
-            LocalTime currentEnd = currentStart.plusMinutes(slotDuration);
-            slots.add(new TimeSlot(currentStart, currentEnd));
-            currentStart = currentEnd;
+        // Detectar si cruza medianoche (end < start)
+        boolean crossesMidnight = endTime.isBefore(currentStart) || endTime.equals(LocalTime.MIDNIGHT);
+        
+        // Usar LocalDateTime para manejar correctamente el cruce de medianoche
+        LocalDateTime startDateTime = LocalDateTime.of(LocalDate.now(), currentStart);
+        LocalDateTime endDateTime = LocalDateTime.of(LocalDate.now(), endTime);
+        
+        if (crossesMidnight && !endTime.equals(LocalTime.MIDNIGHT)) {
+            // Si end < start, mover end al día siguiente
+            endDateTime = endDateTime.plusDays(1);
+        } else if (endTime.equals(LocalTime.MIDNIGHT)) {
+            // Medianoche del día siguiente
+            endDateTime = LocalDateTime.of(LocalDate.now().plusDays(1), LocalTime.MIDNIGHT);
+        }
+        
+        LocalDateTime current = startDateTime;
+        
+        // Generar slots con protección contra bucle infinito
+        int maxSlots = 100; // Protección: máximo 100 slots
+        int slotCount = 0;
+        
+        while ((current.plusMinutes(slotDuration).isBefore(endDateTime) || 
+                current.plusMinutes(slotDuration).equals(endDateTime)) && 
+               slotCount < maxSlots) {
+            LocalTime slotStart = current.toLocalTime();
+            LocalTime slotEnd = current.plusMinutes(slotDuration).toLocalTime();
+            slots.add(new TimeSlot(slotStart, slotEnd));
+            current = current.plusMinutes(slotDuration);
+            slotCount++;
+        }
+        
+        if (slotCount >= maxSlots) {
+            throw new IllegalStateException(
+                String.format("Se alcanzó el límite de slots (%d) para %s. Verifica la configuración: start=%s, end=%s, duration=%d min",
+                    maxSlots, mealTime, currentStart, endTime, slotDuration));
         }
         
         return slots;

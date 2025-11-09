@@ -22,8 +22,8 @@ public class Reservation {
     private MenuMeal.MealTime mealTime; // DESAYUNO, ALMUERZO, MERIENDA, CENA
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private MealTimeSlot reservationTimeSlot; // Slot específico de 1 hora
+    @Column(nullable = true)
+    private MealTimeSlot reservationTimeSlot; // Slot específico (nullable para slots dinámicos)
 
     @Column(nullable = false)
     private LocalDateTime reservationDate; // Fecha de la reserva (sin hora, la hora viene del slot)

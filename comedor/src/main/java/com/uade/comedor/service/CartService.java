@@ -4,8 +4,10 @@ import com.uade.comedor.dto.CartCreateRequest;
 import com.uade.comedor.entity.Cart;
 import com.uade.comedor.entity.Bill;
 import com.uade.comedor.entity.Product;
+import com.uade.comedor.entity.Reservation;
 import com.uade.comedor.repository.CartRepository;
 import com.uade.comedor.repository.ProductRepository;
+import com.uade.comedor.repository.ReservationRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,22 +24,77 @@ public class CartService {
     private final CartRepository cartRepository;
     private final ProductRepository productRepository;
     private final BillService billService;
+    private final ReservationRepository reservationRepository;
 
-    public CartService(CartRepository cartRepository, ProductRepository productRepository, BillService billService) {
+    public CartService(CartRepository cartRepository, ProductRepository productRepository, 
+                      BillService billService, ReservationRepository reservationRepository) {
         this.cartRepository = cartRepository;
         this.productRepository = productRepository;
         this.billService = billService;
+        this.reservationRepository = reservationRepository;
     }
 
     @Transactional
     public Cart createCart(CartCreateRequest request) {
         List<Product> products = getProductsFromIds(request.getCart());
+        BigDecimal subtotal = calculateTotal(products);
+        BigDecimal discount = BigDecimal.ZERO;
+        Long reservationId = null;
+        
+        // Si se proporciona una reserva, validar y calcular descuento
+        if (request.getReservationId() != null) {
+            Reservation reservation = reservationRepository.findById(request.getReservationId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                    "Reserva no encontrada"));
+            
+            // Validar estado de la reserva
+            if (reservation.getStatus() == Reservation.ReservationStatus.CANCELADA) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No puedes usar una reserva CANCELADA para obtener descuento");
+            }
+            
+            if (reservation.getStatus() == Reservation.ReservationStatus.AUSENTE) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No puedes usar una reserva AUSENTE para obtener descuento");
+            }
+            
+            // Validar ventana de 24 horas
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime reservationTime = reservation.getReservationDate();
+            Duration timeDiff = Duration.between(reservationTime, now);
+            long hoursDiff = Math.abs(timeDiff.toHours());
+            
+            if (hoursDiff > 24) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    String.format("Solo puedes usar el descuento de la reserva dentro de las 24 horas. " +
+                                 "Reserva: %s. Hora actual: %s. Diferencia: %d horas",
+                                 reservationTime, now, hoursDiff));
+            }
+            
+            // Validar que la reserva aún tenga descuento disponible (cost > 0)
+            if (reservation.getCost().compareTo(BigDecimal.ZERO) == 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Esta reserva ya fue utilizada para obtener un descuento. Solo puedes usar el descuento una vez.");
+            }
+            
+            // Aplicar descuento
+            discount = reservation.getCost();
+            reservationId = reservation.getId();
+            
+            // Marcar la reserva como usada (cost = 0) para que no se pueda reutilizar
+            reservation.setCost(BigDecimal.ZERO);
+            reservationRepository.save(reservation);
+        }
+        
+        // Crear carrito
         Cart cart = new Cart();
-        cart.setUserId(1L);
+        cart.setUserId(1L); // TODO: Obtener del contexto de seguridad
         cart.setPaymentMethod(request.getPaymentMethod());
         cart.setStatus(Cart.CartStatus.OPEN);
         cart.setProducts(products);
-        cart.setTotal(calculateTotal(products));
+        cart.setReservationId(reservationId);
+        cart.setReservationDiscount(discount);
+        cart.setTotal(subtotal.subtract(discount)); // Total = Subtotal - Descuento
         cart.setCreatedAt(LocalDateTime.now());
         
         return cartRepository.save(cart);
@@ -77,8 +135,40 @@ public class CartService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se pueden confirmar carritos abiertos");
         }
 
-        // Crear factura
+        // Si el carrito tiene una reserva asociada, confirmarla automáticamente
+        if (cart.getReservationId() != null) {
+            Reservation reservation = reservationRepository.findById(cart.getReservationId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                    "Reserva no encontrada"));
+            
+            // Validar ventana de tiempo de 20 minutos para la confirmación
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime reservationTime = reservation.getReservationDate();
+            LocalDateTime earliestConfirmTime = reservationTime.minusMinutes(20);
+            LocalDateTime latestConfirmTime = reservationTime.plusMinutes(20);
+            
+            if (now.isBefore(earliestConfirmTime) || now.isAfter(latestConfirmTime)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    String.format("Solo puedes confirmar el carrito (y la reserva) entre 20 minutos antes y 20 minutos después del horario reservado. " +
+                                 "Horario de reserva: %s. Ventana de confirmación: %s a %s. Hora actual: %s",
+                                 reservationTime,
+                                 earliestConfirmTime,
+                                 latestConfirmTime,
+                                 now));
+            }
+            
+            // Confirmar la reserva automáticamente
+            if (reservation.getStatus() != Reservation.ReservationStatus.CONFIRMADA) {
+                reservation.setStatus(Reservation.ReservationStatus.CONFIRMADA);
+                reservationRepository.save(reservation);
+            }
+        }
+
+        // Crear factura con toda la información del carrito (incluyendo descuentos)
         Bill bill = billService.createBillFromCart(cart);
+        
+        // Asociar la factura al carrito
+        cart.setBillId(bill.getId());
 
         // Actualizar estado del carrito
         cart.setStatus(Cart.CartStatus.CONFIRMED);
