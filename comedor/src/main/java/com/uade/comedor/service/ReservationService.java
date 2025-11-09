@@ -123,6 +123,7 @@ public class ReservationService {
     }
     
     // Método helper para determinar el enum MealTimeSlot basado en mealTime y hora de inicio
+    // Retorna null si no existe el enum (para slots dinámicos que exceden los predefinidos)
     private MealTimeSlot determineTimeSlotEnum(com.uade.comedor.entity.MenuMeal.MealTime mealTime, LocalTime startTime) {
         List<MealTimeScheduleService.TimeSlot> slots = scheduleService.calculateTimeSlots(mealTime);
         int slotIndex = 0;
@@ -134,9 +135,14 @@ public class ReservationService {
             }
         }
         
-        // Mapear a los enums existentes
+        // Intentar mapear a los enums existentes, retornar null si no existe
         String enumName = mealTime.name() + "_SLOT_" + (slotIndex + 1);
-        return MealTimeSlot.valueOf(enumName);
+        try {
+            return MealTimeSlot.valueOf(enumName);
+        } catch (IllegalArgumentException e) {
+            // El enum no existe, retornar null (slots dinámicos adicionales)
+            return null;
+        }
     }
 
     // Get all reservations

@@ -14,6 +14,15 @@ public class Cart {
 
     @Column(nullable = false)
     private Long userId;
+    
+    @Column
+    private Long billId; // Factura asociada al carrito
+    
+    @Column
+    private Long reservationId; // Reserva que da descuento (si aplica)
+    
+    @Column
+    private BigDecimal reservationDiscount; // Descuento aplicado por la reserva
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -92,6 +101,30 @@ public class Cart {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Long getBillId() {
+        return billId;
+    }
+
+    public void setBillId(Long billId) {
+        this.billId = billId;
+    }
+
+    public Long getReservationId() {
+        return reservationId;
+    }
+
+    public void setReservationId(Long reservationId) {
+        this.reservationId = reservationId;
+    }
+
+    public BigDecimal getReservationDiscount() {
+        return reservationDiscount;
+    }
+
+    public void setReservationDiscount(BigDecimal reservationDiscount) {
+        this.reservationDiscount = reservationDiscount;
     }
 
     public List<Product> getProducts() {

@@ -34,7 +34,8 @@ public class BillService {
         Bill bill = new Bill();
         bill.setUserId(cart.getUserId());
         bill.setCartId(cart.getId());
-        bill.setSubtotal(cart.getTotal());
+        bill.setReservationId(cart.getReservationId()); // Asociar reserva si existe
+        bill.setSubtotal(cart.getTotal()); // Total ya tiene el descuento aplicado
         bill.setCreatedAt(LocalDateTime.now());
         bill.setProducts(new java.util.ArrayList<>(cart.getProducts()));
         
