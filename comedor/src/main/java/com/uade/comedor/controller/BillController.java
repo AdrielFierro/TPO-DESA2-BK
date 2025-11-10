@@ -25,4 +25,10 @@ public class BillController {
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         return ResponseEntity.ok(billService.getBills(startDate, endDate));
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Bill> getById(@PathVariable Long id) {
+        Bill bill = billService.getBillById(id);
+        return ResponseEntity.ok(bill);
+    }
 }

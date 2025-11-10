@@ -42,6 +42,13 @@ public class ProductController {
 	public ResponseEntity<?> createFromJson(@RequestBody Product product) {
 		try {
 			logger.info("📦 Creando producto desde JSON: {}", product.getName());
+			// Si el JSON trae una data URL (base64), subirla y reemplazar por la URL del blob
+			if (product.getImageUrl() != null && product.getImageUrl().startsWith("data:")) {
+				logger.info("🔍 Se recibió imageUrl como data URL. Subiendo a Azure...");
+				String imageUrl = azureBlobStorageService.uploadImageFromBase64(product.getImageUrl());
+				product.setImageUrl(imageUrl);
+				logger.info("✅ Data URL subida y reemplazada por: {}", imageUrl);
+			}
 			Product created = productService.create(product);
 			logger.info("✅ Producto creado con ID: {}", created.getId());
 			return ResponseEntity.status(201).body(created);
@@ -121,6 +128,13 @@ public class ProductController {
 	public ResponseEntity<?> updateFromJson(@PathVariable Long id, @RequestBody Product product) {
 		try {
 			logger.info("📝 Actualizando producto {} desde JSON", id);
+			// Si el JSON incluye una data URL para la imagen, subirla y reemplazar
+			if (product.getImageUrl() != null && product.getImageUrl().startsWith("data:")) {
+				logger.info("🔍 Se recibió imageUrl como data URL en update. Subiendo a Azure...");
+				String imageUrl = azureBlobStorageService.uploadImageFromBase64(product.getImageUrl());
+				product.setImageUrl(imageUrl);
+				logger.info("✅ Data URL subida y reemplazada por: {}", imageUrl);
+			}
 			Product updated = productService.update(id, product).orElse(null);
 			if (updated == null) {
 				return ResponseEntity.notFound().build();
