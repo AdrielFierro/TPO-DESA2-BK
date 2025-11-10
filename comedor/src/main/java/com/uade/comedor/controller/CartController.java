@@ -25,6 +25,12 @@ public class CartController {
         return new ResponseEntity<>(createdCart, HttpStatus.CREATED);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Cart> getCartById(@PathVariable Long id) {
+        Cart cart = cartService.getCartById(id);
+        return ResponseEntity.ok(cart);
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<Cart> updateCart(@PathVariable Long id, @RequestBody CartCreateRequest request) {
         Cart updatedCart = cartService.updateCart(id, request);

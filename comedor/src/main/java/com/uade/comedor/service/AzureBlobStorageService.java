@@ -10,6 +10,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.util.Base64;
 import java.util.UUID;
 
 /**
@@ -144,5 +147,69 @@ public class AzureBlobStorageService {
                contentType.equals("image/png") ||
                contentType.equals("image/jpg") ||
                contentType.equals("image/webp");
+    }
+
+    /**
+     * Sube una imagen enviada como data URL (base64) y retorna la URL pública del blob.
+     * Formato esperado: data:<mime-type>;base64,<base64-data>
+     */
+    public String uploadImageFromBase64(String dataUrl) throws IOException {
+        logger.info("🔵 Iniciando subida de imagen desde data URL");
+
+        if (dataUrl == null || !dataUrl.startsWith("data:")) {
+            logger.error("❌ Data URL inválida");
+            throw new IllegalArgumentException("Data URL inválida");
+        }
+
+        int commaIndex = dataUrl.indexOf(',');
+        if (commaIndex < 0) {
+            logger.error("❌ Data URL sin sección base64");
+            throw new IllegalArgumentException("Data URL sin sección base64");
+        }
+
+        String meta = dataUrl.substring(5, commaIndex); // skip "data:"
+        String base64Data = dataUrl.substring(commaIndex + 1);
+
+        // meta suele ser "image/jpeg;base64" o similar
+        String[] metaParts = meta.split(";");
+        String contentType = metaParts.length > 0 ? metaParts[0] : null;
+
+        if (contentType == null || !contentType.startsWith("image/")) {
+            logger.error("❌ Tipo de contenido inválido para data URL: {}", contentType);
+            throw new IllegalArgumentException("El data URL debe contener un tipo de imagen válido");
+        }
+
+        byte[] bytes;
+        try {
+            bytes = Base64.getDecoder().decode(base64Data);
+        } catch (IllegalArgumentException e) {
+            logger.error("❌ Error al decodificar base64: {}", e.getMessage());
+            throw new IOException("Error al decodificar base64: " + e.getMessage(), e);
+        }
+
+        // Determinar extensión a partir del contentType
+        String extension = "";
+        if (contentType.equals("image/jpeg") || contentType.equals("image/jpg")) extension = ".jpg";
+        else if (contentType.equals("image/png")) extension = ".png";
+        else if (contentType.equals("image/webp")) extension = ".webp";
+
+        String blobName = java.util.UUID.randomUUID().toString() + extension;
+
+        try (InputStream is = new ByteArrayInputStream(bytes)) {
+            BlobClient blobClient = blobContainerClient.getBlobClient(blobName);
+
+            BlobHttpHeaders headers = new BlobHttpHeaders().setContentType(contentType);
+
+            // Subir los bytes
+            blobClient.upload(is, bytes.length, true);
+            blobClient.setHttpHeaders(headers);
+
+            String blobUrl = blobClient.getBlobUrl();
+            logger.info("✅ Imagen subida desde data URL exitosamente: {}", blobUrl);
+            return blobUrl;
+        } catch (Exception e) {
+            logger.error("❌ Error al subir imagen desde data URL a Azure: {}", e.getMessage(), e);
+            throw new IOException("Error al subir imagen a Azure: " + e.getMessage(), e);
+        }
     }
 }

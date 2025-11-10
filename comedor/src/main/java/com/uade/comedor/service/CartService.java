@@ -78,17 +78,33 @@ public class CartService {
                     "No puedes usar una reserva AUSENTE para obtener descuento");
             }
 
-            // Validar ventana de 24 horas
+            // Validar ventana: para crear el carrito sólo está permitido desde 20 minutos antes del inicio del slot hasta el fin del slot
             LocalDateTime now = LocalDateTime.now();
-            LocalDateTime reservationTime = reservation.getReservationDate();
-            Duration timeDiff = Duration.between(reservationTime, now);
-            long hoursDiff = Math.abs(timeDiff.toHours());
+            LocalDateTime earliestAllowed;
+            LocalDateTime latestAllowed;
 
-            if (hoursDiff > 24) {
+            if (reservation.getSlotStartTime() != null && reservation.getSlotEndTime() != null) {
+                java.time.LocalDate resDate = reservation.getReservationDate().toLocalDate();
+                earliestAllowed = LocalDateTime.of(resDate, reservation.getSlotStartTime()).minusMinutes(20);
+
+                // Si el slot cruza la medianoche, el end se considera al día siguiente
+                if (reservation.getSlotEndTime().isBefore(reservation.getSlotStartTime()) ||
+                        reservation.getSlotEndTime().equals(reservation.getSlotStartTime())) {
+                    latestAllowed = LocalDateTime.of(resDate.plusDays(1), reservation.getSlotEndTime());
+                } else {
+                    latestAllowed = LocalDateTime.of(resDate, reservation.getSlotEndTime());
+                }
+            } else {
+                // Fallback: si no hay tiempos explícitos, permitimos crear entre -20 y +20 minutos de reservationDate
+                LocalDateTime reservationTime = reservation.getReservationDate();
+                earliestAllowed = reservationTime.minusMinutes(20);
+                latestAllowed = reservationTime.plusMinutes(20);
+            }
+
+            if (now.isBefore(earliestAllowed) || now.isAfter(latestAllowed)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    String.format("Solo puedes usar el descuento de la reserva dentro de las 24 horas. " +
-                                 "Reserva: %s. Hora actual: %s. Diferencia: %d horas",
-                                 reservationTime, now, hoursDiff));
+                    String.format("No puedes crear un carrito para esta reserva fuera de la ventana permitida: %s a %s. Hora actual: %s",
+                        earliestAllowed, latestAllowed, now));
             }
 
             // Determinar si la reserva ya fue usada en otra factura o si se pidió explícitamente skip por billId
@@ -161,17 +177,35 @@ public class CartService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
                     "Reserva no encontrada"));
             
-            // Validar ventana de tiempo de 20 minutos para la confirmación
+            // Validar ventana: desde 20 minutos antes del inicio del slot hasta el fin del slot
             LocalDateTime now = LocalDateTime.now();
-            LocalDateTime reservationTime = reservation.getReservationDate();
-            LocalDateTime earliestConfirmTime = reservationTime.minusMinutes(20);
-            LocalDateTime latestConfirmTime = reservationTime.plusMinutes(20);
-            
+
+            LocalDateTime earliestConfirmTime;
+            LocalDateTime latestConfirmTime;
+
+            if (reservation.getSlotStartTime() != null && reservation.getSlotEndTime() != null) {
+                // Construir DateTimes a partir de la fecha de la reserva y los tiempos explícitos
+                java.time.LocalDate reservationDateOnly = reservation.getReservationDate().toLocalDate();
+                earliestConfirmTime = LocalDateTime.of(reservationDateOnly, reservation.getSlotStartTime()).minusMinutes(20);
+
+                // Manejar slot que cruza la medianoche (end antes de start -> next day)
+                if (reservation.getSlotEndTime().isBefore(reservation.getSlotStartTime()) ||
+                        reservation.getSlotEndTime().equals(reservation.getSlotStartTime())) {
+                    latestConfirmTime = LocalDateTime.of(reservationDateOnly.plusDays(1), reservation.getSlotEndTime());
+                } else {
+                    latestConfirmTime = LocalDateTime.of(reservationDateOnly, reservation.getSlotEndTime());
+                }
+            } else {
+                // Fallback: usar reservationDate como antes (20 minutos antes hasta 20 minutos después)
+                LocalDateTime reservationTime = reservation.getReservationDate();
+                earliestConfirmTime = reservationTime.minusMinutes(20);
+                latestConfirmTime = reservationTime.plusMinutes(20);
+            }
+
             if (now.isBefore(earliestConfirmTime) || now.isAfter(latestConfirmTime)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    String.format("Solo puedes confirmar el carrito (y la reserva) entre 20 minutos antes y 20 minutos después del horario reservado. " +
-                                 "Horario de reserva: %s. Ventana de confirmación: %s a %s. Hora actual: %s",
-                                 reservationTime,
+                    String.format("Solo puedes confirmar el carrito (y la reserva) entre 20 minutos antes del inicio del slot y el fin del slot. " +
+                                 "Ventana de confirmación: %s a %s. Hora actual: %s",
                                  earliestConfirmTime,
                                  latestConfirmTime,
                                  now));
@@ -208,6 +242,11 @@ public class CartService {
         cartRepository.save(cart);
 
         return bill;
+    }
+
+    public Cart getCartById(Long id) {
+        return cartRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Carrito no encontrado"));
     }
 
     private List<Product> getProductsFromIds(List<Long> productIds) {
