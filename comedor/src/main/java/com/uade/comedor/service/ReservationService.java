@@ -178,7 +178,26 @@ public class ReservationService {
                 "La reserva fue cancelada por el usuario");
         }
         
-        // Estados válidos: ACTIVA y CONFIRMADA permiten continuar
+        // Validar si está CONFIRMADA pero ya pasó el horario de fin
+        if (r.getStatus() == Reservation.ReservationStatus.CONFIRMADA) {
+            // Asegurar que los horarios del slot estén poblados
+            populateSlotTimes(r);
+            
+            if (r.getSlotEndTime() != null) {
+                // Combinar la fecha de la reserva con el horario de fin del slot
+                LocalDateTime reservationEndDateTime = r.getReservationDate().toLocalDate()
+                    .atTime(r.getSlotEndTime());
+                LocalDateTime now = LocalDateTime.now();
+                
+                // Si la hora actual es igual o posterior al fin del slot, la reserva ya finalizó
+                if (!now.isBefore(reservationEndDateTime)) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "La reserva ya finalizó");
+                }
+            }
+        }
+        
+        // Estados válidos: ACTIVA y CONFIRMADA (dentro del horario) permiten continuar
         populateSlotTimes(r);
         return r;
     }
