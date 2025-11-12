@@ -215,6 +215,17 @@ public class ReservationService {
                 .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
         return r.getCost();
     }
+
+    /**
+     * Obtiene el costo que tendrá una nueva reserva.
+     * TODO: Este método más adelante llamará a un endpoint externo para obtener el costo dinámico.
+     * Por ahora retorna 25 hardcodeado.
+     */
+    public BigDecimal getNextReservationCost() {
+        // TODO: llamar al endpoint externo del módulo interno
+        // return externalApiService.getReservationCostFromExternalModule();
+        return BigDecimal.valueOf(25);
+    }
     
     /**
      * Obtiene las reservas de un usuario:

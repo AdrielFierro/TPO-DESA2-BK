@@ -87,7 +87,7 @@ public class ReservationController {
         }
     }
 
-    // GET /reservations/cost?reservationId=...
+    // GET /reservations/cost/{reservationId} - obtiene el costo de una reserva específica ya creada
     @GetMapping("/cost/{reservationId}")
     public ResponseEntity<java.math.BigDecimal> getCost(@PathVariable Long reservationId) {
         try {
@@ -96,6 +96,14 @@ public class ReservationController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    // GET /reservations/cost - obtiene el costo que tendrá una nueva reserva (sin parámetros)
+    // Este endpoint será integrado con un módulo interno más adelante
+    @GetMapping("/cost")
+    public ResponseEntity<java.math.BigDecimal> getNextReservationCost() {
+        java.math.BigDecimal cost = reservationService.getNextReservationCost();
+        return ResponseEntity.ok(cost);
     }
 
     // Endpoint deshabilitado: Las reservas se confirman automáticamente al confirmar un carrito
