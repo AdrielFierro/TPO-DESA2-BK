@@ -261,4 +261,11 @@ public class CartService {
             .map(Product::getPrice)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
+
+    /**
+     * Obtiene todos los carritos existentes
+     */
+    public List<Cart> getAllCarts() {
+        return cartRepository.findAll();
+    }
 }

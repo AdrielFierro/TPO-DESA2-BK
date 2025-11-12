@@ -246,6 +246,32 @@ GET /reservations/byreservationId/1
 }
 ```
 
+**Respuesta de error - Fecha no coincide (400 BAD REQUEST):**
+```json
+{
+  "timestamp": "2025-11-12T14:50:00.000Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "La reserva no coincide con el día de la fecha, no puede avanzar. La fecha de la reserva es: 2025-11-15",
+  "path": "/reservations/byreservationId/1"
+}
+```
+
+**Respuesta de error - Reserva vencida (400 BAD REQUEST):**
+```json
+{
+  "timestamp": "2025-11-12T14:50:00.000Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "La reserva está vencida. La fecha y hora de la reserva era: 2025-11-12T10:00:00",
+  "path": "/reservations/byreservationId/1"
+}
+```
+
+**Nota importante:** Este endpoint valida:
+1. **Reserva vencida**: Si la fecha/hora de la reserva ya pasó, retorna error indicando que está vencida
+2. **Día diferente**: Si la reserva es para otro día (futuro), retorna error indicando que no coincide con el día actual
+
 ---
 
 ## 📝 Guía paso a paso para Postman
@@ -737,4 +763,457 @@ El formato de respuesta es idéntico, por lo que no se requieren cambios en el c
 - O bien deshabilitar `/menus/demo/now` en el ambiente de producción mediante configuración
 
 ✅ **El endpoint `/menus/now` original NO fue modificado** y mantiene su comportamiento correcto de validación de día y horario.
+
+---
+
+### 2025-11-12 - Validación de fecha en consulta de reserva por ID
+
+#### Problema/Necesidad
+Al buscar una reserva por ID mediante el endpoint `GET /reservations/byreservationId/{reservationId}`, se necesitaba validar que la reserva corresponda al día actual. Esto previene que usuarios intenten avanzar con reservas que no son del día de hoy.
+
+#### Solución implementada
+Se agregó validación en el método `getReservationById()` del servicio `ReservationService` que:
+1. **Primero** verifica si la reserva está vencida (fecha/hora anterior al momento actual)
+2. **Luego** verifica si la fecha es de otro día (futuro)
+3. Si alguna validación falla, lanza un error 400 BAD REQUEST con mensaje específico
+4. El mensaje de error incluye la fecha/hora real de la reserva
+
+#### Comportamiento del endpoint
+
+**Endpoint afectado:** `GET /reservations/byreservationId/{reservationId}`
+
+**Caso exitoso (200 OK):**
+- La reserva existe
+- La fecha de la reserva coincide con el día actual
+- La hora de la reserva NO ha pasado aún
+- Retorna los datos completos de la reserva
+
+**Caso de error - Reserva vencida (400 BAD REQUEST):**
+```json
+{
+  "timestamp": "2025-11-12T15:30:00.000Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "La reserva está vencida. La fecha y hora de la reserva era: 2025-11-12T12:00:00",
+  "path": "/reservations/byreservationId/1"
+}
+```
+Este error ocurre cuando la fecha/hora de la reserva ya pasó (ej: son las 15:30 y la reserva era a las 12:00).
+
+**Caso de error - Fecha no coincide (400 BAD REQUEST):**
+```json
+{
+  "timestamp": "2025-11-12T14:50:00.000Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "La reserva no coincide con el día de la fecha, no puede avanzar. La fecha de la reserva es: 2025-11-15",
+  "path": "/reservations/byreservationId/1"
+}
+```
+Este error ocurre cuando la reserva es para un día futuro.
+
+**Caso de error - Reserva no encontrada (404 NOT FOUND):**
+```json
+{
+  "timestamp": "2025-11-12T14:50:00.000Z",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Reservation not found",
+  "path": "/reservations/byreservationId/999"
+}
+```
+
+#### Ejemplos de uso
+
+**Ejemplo 1: Consultar reserva del día actual y hora futura (éxito)**
+```http
+GET /reservations/byreservationId/1
+```
+Suponiendo que ahora son las 11:00 del 2025-11-12 y la reserva 1 es para las 12:00 del mismo día:
+```json
+{
+  "id": 1,
+  "userId": 5,
+  "locationId": 1,
+  "mealTime": "ALMUERZO",
+  "reservationTimeSlot": "ALMUERZO_SLOT_1",
+  "reservationDate": "2025-11-12T12:00:00",
+  "status": "ACTIVA",
+  "cost": 25.0,
+  "createdAt": "2025-11-11T15:30:00",
+  "slotStartTime": "12:00:00",
+  "slotEndTime": "13:00:00"
+}
+```
+
+**Ejemplo 2: Consultar reserva vencida del mismo día (error)**
+```http
+GET /reservations/byreservationId/2
+```
+Suponiendo que ahora son las 15:00 del 2025-11-12 y la reserva 2 era para las 12:00 del mismo día:
+```json
+{
+  "timestamp": "2025-11-12T18:00:00.000Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "La reserva está vencida. La fecha y hora de la reserva era: 2025-11-12T12:00:00",
+  "path": "/reservations/byreservationId/2"
+}
+```
+
+**Ejemplo 3: Consultar reserva de otro día futuro (error)**
+```http
+GET /reservations/byreservationId/3
+```
+Suponiendo que hoy es 2025-11-12 pero la reserva 3 es para el 2025-11-15:
+```json
+{
+  "timestamp": "2025-11-12T17:50:23.123Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "La reserva no coincide con el día de la fecha, no puede avanzar. La fecha de la reserva es: 2025-11-15",
+  "path": "/reservations/byreservationId/3"
+}
+```
+
+#### Casos de uso típicos
+
+1. **Escaneo de QR en el comedor:**
+   - Usuario escanea QR con su reserva del día
+   - Sistema consulta `/reservations/byreservationId/{id}`
+   - Si es del día actual → permite avanzar con el proceso
+   - Si es de otro día → muestra mensaje de error con la fecha correcta
+
+2. **Verificación de asistencia:**
+   - Personal del comedor consulta reserva
+   - Solo permite confirmar asistencia si es del día actual
+   - Previene errores de confirmación anticipada o tardía
+
+3. **Control de acceso:**
+   - Usuario intenta acceder con reserva antigua o futura
+   - Sistema rechaza y muestra cuándo es su reserva real
+
+#### Lógica de validación
+
+```java
+LocalDateTime now = LocalDateTime.now(); // Usa timezone de Argentina configurado
+
+// 1. Primero verifica si la reserva está vencida (fecha/hora pasada)
+if (reservation.getReservationDate().isBefore(now)) {
+    // Error: reserva vencida
+    throw new ResponseStatusException(400, 
+        "La reserva está vencida. La fecha y hora de la reserva era: " + reservationDate);
+}
+
+// 2. Luego verifica si es de otro día (futuro)
+LocalDate today = now.toLocalDate();
+LocalDate reservationDay = reservation.getReservationDate().toLocalDate();
+
+if (!reservationDay.equals(today)) {
+    // Error: fecha no coincide (día futuro)
+    throw new ResponseStatusException(400,
+        "La reserva no coincide con el día de la fecha, no puede avanzar. " +
+        "La fecha de la reserva es: " + reservationDay);
+}
+```
+
+**Orden de validaciones:**
+1. **Primero**: Reserva vencida (fecha/hora anterior a ahora)
+2. **Segundo**: Día diferente (fecha futura)
+
+Esto garantiza que:
+- Una reserva de las 10:00 de hoy consultada a las 15:00 → "vencida"
+- Una reserva de mañana consultada hoy → "no coincide con el día"
+- Una reserva de ayer → "vencida" (porque su fecha/hora ya pasó)
+
+#### Impacto en otros endpoints
+
+Este cambio **SOLO** afecta a:
+- ✅ `GET /reservations/byreservationId/{reservationId}`
+
+**NO** afecta a:
+- ❌ `GET /reservations` (listar todas)
+- ❌ `GET /reservations/mine?userId={id}` (listar del usuario)
+- ❌ `POST /reservations/mine` (buscar por rango de fechas)
+- ❌ `POST /reservations` (crear nueva reserva)
+- ❌ `DELETE /reservations/{id}` (cancelar)
+
+Estos otros endpoints pueden mostrar reservas de cualquier fecha sin restricción.
+
+#### Archivos modificados
+
+- **Modificado:** `comedor/src/main/java/com/uade/comedor/service/ReservationService.java`
+- **Actualizado:** `comedor/RESERVATIONS_API.md` (esta documentación)
+
+#### Consideraciones de zona horaria
+
+La validación usa `LocalDateTime.now()` que respeta la configuración de zona horaria de Argentina establecida en:
+```java
+// ComedorApplication.java
+TimeZone.setDefault(TimeZone.getTimeZone("America/Argentina/Buenos_Aires"));
+```
+
+Esto garantiza que "hoy" se refiera al día actual en Argentina, no UTC.
+
+---
+
+### 2025-11-12 - Endpoint para listar todos los carritos
+
+#### Problema/Necesidad
+El frontend necesita poder listar todos los carritos existentes en el sistema para:
+- Mostrar carritos activos del usuario
+- Identificar si existe un carrito abierto (OPEN) que pueda editarse
+- Permitir al usuario ver su historial de carritos
+- Facilitar la decisión entre crear un nuevo carrito o editar uno existente
+
+#### Solución implementada
+Se agregó el endpoint `GET /carts` que retorna todos los carritos existentes en el sistema.
+
+**Endpoint:** `GET /carts`
+
+**Método HTTP:** GET
+
+**Parámetros:** Ninguno
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": 1,
+    "userId": 1,
+    "billId": 5,
+    "reservationId": 3,
+    "reservationDiscount": 25.00,
+    "paymentMethod": "SALDOCUENTA",
+    "status": "CONFIRMED",
+    "total": 2475.00,
+    "createdAt": "2025-11-12T12:00:00",
+    "products": [
+      {
+        "id": 1,
+        "name": "Pizza",
+        "price": 1000.00,
+        "productType": "PLATO"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "userId": 1,
+    "billId": null,
+    "reservationId": null,
+    "reservationDiscount": 0.00,
+    "paymentMethod": "EFECTIVO",
+    "status": "OPEN",
+    "total": 1500.00,
+    "createdAt": "2025-11-12T14:30:00",
+    "products": [...]
+  }
+]
+```
+
+#### Estados de carritos
+
+Los carritos pueden tener los siguientes estados:
+- **OPEN**: Carrito activo, puede editarse
+- **CONFIRMED**: Carrito confirmado, factura generada
+- **CANCELLED**: Carrito cancelado por el usuario
+
+#### Ejemplos de uso en Postman
+
+**Request:**
+```http
+GET http://localhost:8080/carts
+```
+
+**Response con carritos existentes:**
+```json
+[
+  {
+    "id": 1,
+    "userId": 1,
+    "status": "CONFIRMED",
+    "total": 2500.00,
+    "paymentMethod": "EFECTIVO"
+  },
+  {
+    "id": 2,
+    "userId": 1,
+    "status": "OPEN",
+    "total": 1500.00,
+    "paymentMethod": "SALDOCUENTA"
+  }
+]
+```
+
+**Response con base de datos vacía:**
+```json
+[]
+```
+
+#### Uso en el frontend
+
+**Flujo recomendado para decidir entre crear o editar:**
+
+```javascript
+// 1. Obtener todos los carritos
+const response = await fetch('/carts');
+const carts = await response.json();
+
+// 2. Buscar si existe un carrito OPEN del usuario actual
+const openCart = carts.find(cart => 
+  cart.userId === currentUserId && 
+  cart.status === 'OPEN'
+);
+
+if (openCart) {
+  // Existe un carrito abierto → ACTUALIZAR
+  await fetch(`/carts/${openCart.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      cart: [1, 2, 3],
+      paymentMethod: 'EFECTIVO'
+    })
+  });
+} else {
+  // No existe carrito abierto → CREAR NUEVO
+  await fetch('/carts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      cart: [1, 2, 3],
+      paymentMethod: 'EFECTIVO'
+    })
+  });
+}
+```
+
+**Mostrar historial de carritos del usuario:**
+
+```javascript
+const carts = await (await fetch('/carts')).json();
+
+// Filtrar carritos del usuario actual
+const myCarts = carts.filter(cart => cart.userId === currentUserId);
+
+// Separar por estado
+const openCarts = myCarts.filter(c => c.status === 'OPEN');
+const confirmedCarts = myCarts.filter(c => c.status === 'CONFIRMED');
+const cancelledCarts = myCarts.filter(c => c.status === 'CANCELLED');
+
+console.log(`Carritos abiertos: ${openCarts.length}`);
+console.log(`Carritos confirmados: ${confirmedCarts.length}`);
+console.log(`Carritos cancelados: ${cancelledCarts.length}`);
+```
+
+**Verificar si hay carrito activo:**
+
+```javascript
+const hasOpenCart = async (userId) => {
+  const carts = await (await fetch('/carts')).json();
+  return carts.some(cart => 
+    cart.userId === userId && 
+    cart.status === 'OPEN'
+  );
+};
+
+if (await hasOpenCart(currentUserId)) {
+  console.log('Ya tienes un carrito activo');
+} else {
+  console.log('Puedes crear un nuevo carrito');
+}
+```
+
+#### Casos de uso
+
+**1. Listar carritos del usuario:**
+```javascript
+const myCarts = carts.filter(cart => cart.userId === currentUserId);
+// Mostrar en la UI
+```
+
+**2. Encontrar carrito abierto:**
+```javascript
+const openCart = carts.find(c => c.status === 'OPEN' && c.userId === userId);
+if (openCart) {
+  // Continuar editando este carrito
+}
+```
+
+**3. Mostrar total de carritos confirmados:**
+```javascript
+const confirmedTotal = carts
+  .filter(c => c.status === 'CONFIRMED')
+  .reduce((sum, cart) => sum + cart.total, 0);
+console.log(`Total gastado: $${confirmedTotal}`);
+```
+
+**4. Verificar si hay carritos con descuento activo:**
+```javascript
+const cartsWithDiscount = carts.filter(c => 
+  c.reservationDiscount > 0 && 
+  c.status === 'OPEN'
+);
+```
+
+#### Información retornada en cada carrito
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | Long | ID único del carrito |
+| `userId` | Long | ID del usuario propietario |
+| `billId` | Long | ID de la factura asociada (null si no está confirmado) |
+| `reservationId` | Long | ID de la reserva que da descuento (null si no aplica) |
+| `reservationDiscount` | BigDecimal | Monto de descuento aplicado por reserva |
+| `paymentMethod` | String | Método de pago: SALDOCUENTA, EFECTIVO, TRANSFERENCIA |
+| `status` | String | Estado: OPEN, CONFIRMED, CANCELLED |
+| `total` | BigDecimal | Total del carrito (subtotal - descuento) |
+| `createdAt` | LocalDateTime | Fecha y hora de creación |
+| `products` | List | Lista de productos en el carrito |
+
+#### Consideraciones
+
+✅ **Ventajas:**
+- Permite al frontend tener visibilidad completa de todos los carritos
+- Facilita la lógica de decisión entre crear/editar
+- Útil para mostrar historial al usuario
+- Simple de implementar y usar
+
+⚠️ **Limitaciones:**
+- Retorna TODOS los carritos del sistema (de todos los usuarios)
+- En producción con muchos usuarios, podría ser pesado
+- No tiene paginación ni filtros
+
+💡 **Recomendaciones para producción:**
+- Agregar filtro por userId: `GET /carts?userId={id}`
+- Implementar paginación: `GET /carts?page=1&size=10`
+- Filtrar por estado: `GET /carts?status=OPEN`
+- Limitar resultados a los últimos N días
+
+#### Mejoras futuras sugeridas
+
+**Endpoint con filtros (ejemplo):**
+```java
+@GetMapping
+public ResponseEntity<List<Cart>> getAllCarts(
+    @RequestParam(required = false) Long userId,
+    @RequestParam(required = false) Cart.CartStatus status
+) {
+    if (userId != null && status != null) {
+        return ResponseEntity.ok(cartService.getCartsByUserIdAndStatus(userId, status));
+    } else if (userId != null) {
+        return ResponseEntity.ok(cartService.getCartsByUserId(userId));
+    } else if (status != null) {
+        return ResponseEntity.ok(cartService.getCartsByStatus(status));
+    }
+    return ResponseEntity.ok(cartService.getAllCarts());
+}
+```
+
+#### Archivos modificados
+
+- **Modificado:** `comedor/src/main/java/com/uade/comedor/service/CartService.java`
+- **Modificado:** `comedor/src/main/java/com/uade/comedor/controller/CartController.java`
+- **Actualizado:** `comedor/RESERVATIONS_API.md` (esta documentación)
 
