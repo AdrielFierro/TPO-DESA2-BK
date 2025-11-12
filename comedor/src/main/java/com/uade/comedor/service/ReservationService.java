@@ -167,25 +167,18 @@ public class ReservationService {
         Reservation r = reservationRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
         
-        // Validar que la fecha de la reserva coincida con el día actual
-        LocalDateTime now = LocalDateTime.now();
-        java.time.LocalDate today = now.toLocalDate();
-        java.time.LocalDate reservationDay = r.getReservationDate().toLocalDate();
-        
-        // Primero verificar si la reserva está vencida (fecha/hora pasada)
-        if (r.getReservationDate().isBefore(now)) {
+        // Validar según el estado de la reserva
+        if (r.getStatus() == Reservation.ReservationStatus.AUSENTE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                String.format("La reserva está vencida. La fecha y hora de la reserva era: %s",
-                    r.getReservationDate()));
+                "La reserva está vencida");
         }
         
-        // Luego verificar si la fecha es de otro día (futuro)
-        if (!reservationDay.equals(today)) {
+        if (r.getStatus() == Reservation.ReservationStatus.CANCELADA) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                String.format("La reserva no coincide con el día de la fecha, no puede avanzar. La fecha de la reserva es: %s",
-                    reservationDay));
+                "La reserva fue cancelada por el usuario");
         }
         
+        // Estados válidos: ACTIVA y CONFIRMADA permiten continuar
         populateSlotTimes(r);
         return r;
     }
