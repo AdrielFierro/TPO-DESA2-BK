@@ -114,10 +114,10 @@ Content-Type: application/json
 - `locationId` (Long): ID de la ubicación (1=Norte, 2=Sur)
 - `mealTime` (String): `DESAYUNO`, `ALMUERZO`, `MERIENDA`, `CENA`
 - `reservationTimeSlot` (String): Debe corresponder al mealTime:
-  - **DESAYUNO**: `DESAYUNO_SLOT_1` (7-8h), `DESAYUNO_SLOT_2` (8-9h)
-  - **ALMUERZO**: `ALMUERZO_SLOT_1` (12-13h), `ALMUERZO_SLOT_2` (13-14h)
-  - **MERIENDA**: `MERIENDA_SLOT_1` (16-17h), `MERIENDA_SLOT_2` (17-18h)
-  - **CENA**: `CENA_SLOT_1` (20-21h), `CENA_SLOT_2` (21-22h)
+  - **DESAYUNO**: `DESAYUNO_SLOT_1` (7-8h), `DESAYUNO_SLOT_2` (8-9h), `DESAYUNO_SLOT_3` (9-10h), `DESAYUNO_SLOT_4` (10-11h), `DESAYUNO_SLOT_5` (11-12h)
+  - **ALMUERZO**: `ALMUERZO_SLOT_1` (12-13h), `ALMUERZO_SLOT_2` (13-14h), `ALMUERZO_SLOT_3` (14-15h), `ALMUERZO_SLOT_4` (15-16h)
+  - **MERIENDA**: `MERIENDA_SLOT_1` (16-17h), `MERIENDA_SLOT_2` (17-18h), `MERIENDA_SLOT_3` (18-19h), `MERIENDA_SLOT_4` (19-20h)
+  - **CENA**: `CENA_SLOT_1` (20-21h), `CENA_SLOT_2` (21-22h), `CENA_SLOT_3` (22-23h)
 - `reservationDate` (String): Fecha en formato ISO 8601: `YYYY-MM-DDTHH:mm:ss`
 
 **Respuesta exitosa (200 OK):**
@@ -1216,4 +1216,69 @@ public ResponseEntity<List<Cart>> getAllCarts(
 - **Modificado:** `comedor/src/main/java/com/uade/comedor/service/CartService.java`
 - **Modificado:** `comedor/src/main/java/com/uade/comedor/controller/CartController.java`
 - **Actualizado:** `comedor/RESERVATIONS_API.md` (esta documentación)
+
+---
+
+### 2025-11-12 - Sincronización de horarios de comidas con Frontend
+
+#### Problema identificado
+Los horarios configurados en el backend no coincidían con los horarios mostrados en el frontend. Por ejemplo, el backend permitía desayuno solo hasta las 09:00, pero el frontend ofrecía slots hasta las 12:00. Esto causaba errores de validación cuando los usuarios intentaban hacer reservas en horarios válidos según el frontend.
+
+#### Cambios implementados
+
+**Actualización de `MealTimeScheduleService.java`:**
+
+Los horarios se actualizaron para coincidir exactamente con el frontend:
+
+| Comida | Horario Anterior | Horario Nuevo | Slots Disponibles |
+|--------|------------------|---------------|-------------------|
+| **DESAYUNO** | 07:00 - 09:00 | 07:00 - 12:00 | 5 slots de 1 hora |
+| **ALMUERZO** | 12:00 - 14:00 | 12:00 - 16:00 | 4 slots de 1 hora |
+| **MERIENDA** | 16:00 - 18:00 | 16:00 - 20:00 | 4 slots de 1 hora |
+| **CENA** | 20:00 - 22:00 | 20:00 - 23:00 | 3 slots de 1 hora |
+
+**Detalle de slots por comida:**
+
+```java
+// DESAYUNO: 07:00 - 12:00
+DESAYUNO_SLOT_1: 07:00 - 08:00
+DESAYUNO_SLOT_2: 08:00 - 09:00
+DESAYUNO_SLOT_3: 09:00 - 10:00
+DESAYUNO_SLOT_4: 10:00 - 11:00
+DESAYUNO_SLOT_5: 11:00 - 12:00
+
+// ALMUERZO: 12:00 - 16:00
+ALMUERZO_SLOT_1: 12:00 - 13:00
+ALMUERZO_SLOT_2: 13:00 - 14:00
+ALMUERZO_SLOT_3: 14:00 - 15:00
+ALMUERZO_SLOT_4: 15:00 - 16:00
+
+// MERIENDA: 16:00 - 20:00
+MERIENDA_SLOT_1: 16:00 - 17:00
+MERIENDA_SLOT_2: 17:00 - 18:00
+MERIENDA_SLOT_3: 18:00 - 19:00
+MERIENDA_SLOT_4: 19:00 - 20:00
+
+// CENA: 20:00 - 23:00
+CENA_SLOT_1: 20:00 - 21:00
+CENA_SLOT_2: 21:00 - 22:00
+CENA_SLOT_3: 22:00 - 23:00
+```
+
+#### Impacto
+
+✅ **Resuelto:** Ahora los usuarios pueden hacer reservas en todos los horarios mostrados en el frontend
+✅ **Validación correcta:** El backend acepta reservas como "DESAYUNO_SLOT_5" (11:00-12:00) que antes eran rechazadas
+✅ **Sincronización:** Frontend y backend están completamente alineados
+
+⚠️ **Nota importante:** Si ya tenés datos en la base de datos con los horarios antiguos, vas a necesitar:
+1. Eliminar la tabla `meal_time_schedules` o limpiar su contenido
+2. Reiniciar la aplicación para que se inicialicen los nuevos horarios
+3. O actualizar manualmente los registros existentes usando el endpoint PUT de MealTimeSchedule
+
+#### Archivos modificados
+
+- **Modificado:** `comedor/src/main/java/com/uade/comedor/service/MealTimeScheduleService.java`
+- **Actualizado:** `comedor/RESERVATIONS_API.md` (esta documentación)
+
 

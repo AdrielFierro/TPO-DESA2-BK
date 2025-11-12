@@ -23,7 +23,10 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults()) // habilita CORS usando el bean corsConfigurationSource
             .authorizeHttpRequests(auth -> auth
                 .anyRequest().permitAll() // PERMITE TODAS LAS PETICIONES SIN AUTENTICACIÓN
-            );
+            )
+            .httpBasic(httpBasic -> httpBasic.disable()) // Deshabilita HTTP Basic
+            .formLogin(formLogin -> formLogin.disable()) // Deshabilita form login
+            .oauth2ResourceServer(oauth2 -> oauth2.disable()); // Deshabilita OAuth2 Resource Server
 
         return http.build();
     }

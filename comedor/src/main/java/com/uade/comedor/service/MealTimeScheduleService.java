@@ -29,28 +29,28 @@ public class MealTimeScheduleService {
             scheduleRepository.save(new MealTimeSchedule(
                 MenuMeal.MealTime.DESAYUNO,
                 LocalTime.of(7, 0),
-                LocalTime.of(9, 0),
+                LocalTime.of(12, 0),
                 60
             ));
             
             scheduleRepository.save(new MealTimeSchedule(
                 MenuMeal.MealTime.ALMUERZO,
                 LocalTime.of(12, 0),
-                LocalTime.of(14, 0),
+                LocalTime.of(16, 0),
                 60
             ));
             
             scheduleRepository.save(new MealTimeSchedule(
                 MenuMeal.MealTime.MERIENDA,
                 LocalTime.of(16, 0),
-                LocalTime.of(18, 0),
+                LocalTime.of(20, 0),
                 60
             ));
             
             scheduleRepository.save(new MealTimeSchedule(
                 MenuMeal.MealTime.CENA,
                 LocalTime.of(20, 0),
-                LocalTime.of(22, 0),
+                LocalTime.of(23, 0),
                 60
             ));
         }
