@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy JAR app to Azure Web App - comedor
+name: Build and deploy JAR app to Azure Web App - comedorback
 
 on:
   push:
@@ -47,31 +47,18 @@ jobs:
         with:
           name: java-app
       
-      - name: Locate JAR
-        id: find-artifact
-        run: |
-          echo "Listing files after download"
-          ls -la
-          JAR=$(find . -type f -name '*.jar' | head -n 1)
-          if [ -z "$JAR" ]; then
-            echo "No jar found!"
-            exit 1
-          fi
-          echo "Found JAR: $JAR"
-          echo "jar=$JAR" >> $GITHUB_OUTPUT
-      
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_7141E762BD2A41398F36F8EFC3067176 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_725438EC58754525A3C5A4257710F9CE }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_DFDAEE664FA240ADB142AE67E82FD1FD }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_E489C60F70154A8EB220903A2FC1029B }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_9DCC62635F1D4281BAEB648FE2806DD8 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_3E917D69D433463F924F55AF34A67AA5 }}
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'comedor'
+          app-name: 'comedorback'
           slot-name: 'Production'
-          package: ${{ steps.find-artifact.outputs.jar }}
+          package: '*.jar'
           
