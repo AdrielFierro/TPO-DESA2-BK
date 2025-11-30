@@ -14,9 +14,11 @@ import java.util.List;
 @Service
 public class BillService {
     private final BillRepository billRepository;
+    private final BillEventService billEventService;
 
-    public BillService(BillRepository billRepository) {
+    public BillService(BillRepository billRepository, BillEventService billEventService) {
         this.billRepository = billRepository;
+        this.billEventService = billEventService;
     }
 
     public Bill getBillById(Long id) {
@@ -65,6 +67,11 @@ public class BillService {
         bill.setCreatedAt(LocalDateTime.now());
         bill.setProducts(new java.util.ArrayList<>(cart.getProducts()));
 
-        return billRepository.save(bill);
+        Bill savedBill = billRepository.save(bill);
+        
+        // Publicar evento de factura creada
+        billEventService.publishBillCreatedEvent(savedBill);
+        
+        return savedBill;
     }
 }
