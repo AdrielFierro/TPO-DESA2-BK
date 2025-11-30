@@ -28,6 +28,9 @@ public class ReservationService {
     @Autowired
     private MealTimeScheduleService scheduleService;
 
+    @Autowired
+    private ReservationEventService reservationEventService;
+
     public Reservation createReservation(CreateReservationRequest request) {
         LocalTime reservationTime = request.getReservationDate().toLocalTime();
         
@@ -123,7 +126,12 @@ public class ReservationService {
     reservation.setSlotStartTime(targetSlot.getStartTime());
     reservation.setSlotEndTime(targetSlot.getEndTime());
         
-    return reservationRepository.save(reservation);
+    Reservation savedReservation = reservationRepository.save(reservation);
+    
+    // Publicar evento de reserva creada
+    reservationEventService.publishReservationCreatedEvent(savedReservation);
+    
+    return savedReservation;
     }
     
     // Método helper para determinar el enum MealTimeSlot basado en mealTime y hora de inicio
