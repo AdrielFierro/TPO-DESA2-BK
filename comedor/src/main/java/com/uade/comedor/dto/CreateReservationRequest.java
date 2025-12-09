@@ -4,17 +4,17 @@ import com.uade.comedor.entity.MenuMeal;
 import java.time.LocalDateTime;
 
 public class CreateReservationRequest {
-    private Long userId;
+    private String userId;
     private Long locationId;
     private MenuMeal.MealTime mealTime; // DESAYUNO, ALMUERZO, MERIENDA, CENA
     private LocalDateTime reservationDate; // Fecha y hora específica de la reserva
     
     // Getters and Setters
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

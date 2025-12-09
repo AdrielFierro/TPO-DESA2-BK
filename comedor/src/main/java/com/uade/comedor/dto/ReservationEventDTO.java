@@ -6,7 +6,7 @@ import java.time.LocalTime;
 
 public class ReservationEventDTO {
     private Long reservationId;
-    private Long userId;
+    private String userId;
     private Long locationId;
     private String mealTime;
     private String reservationTimeSlot;
@@ -21,7 +21,7 @@ public class ReservationEventDTO {
     public ReservationEventDTO() {
     }
 
-    public ReservationEventDTO(Long reservationId, Long userId, Long locationId,
+    public ReservationEventDTO(Long reservationId, String userId, Long locationId,
                                String mealTime, String reservationTimeSlot,
                                LocalDateTime reservationDate, String status,
                                BigDecimal cost, LocalDateTime createdAt,
@@ -48,11 +48,11 @@ public class ReservationEventDTO {
         this.reservationId = reservationId;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

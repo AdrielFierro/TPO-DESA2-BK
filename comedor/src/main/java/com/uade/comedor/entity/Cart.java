@@ -13,7 +13,7 @@ public class Cart {
     private Long id;
 
     @Column(nullable = false)
-    private Long userId;
+    private String userId;
     
     @Column
     private Long billId; // Factura asociada al carrito
@@ -63,11 +63,11 @@ public class Cart {
         this.id = id;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

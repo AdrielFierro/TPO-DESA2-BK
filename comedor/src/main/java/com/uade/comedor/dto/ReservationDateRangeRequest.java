@@ -3,7 +3,7 @@ package com.uade.comedor.dto;
 import java.time.LocalDateTime;
 
 public class ReservationDateRangeRequest {
-    private Long userId;
+    private String userId;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
 
@@ -11,18 +11,18 @@ public class ReservationDateRangeRequest {
     public ReservationDateRangeRequest() {
     }
 
-    public ReservationDateRangeRequest(Long userId, LocalDateTime startDate, LocalDateTime endDate) {
+    public ReservationDateRangeRequest(String userId, LocalDateTime startDate, LocalDateTime endDate) {
         this.userId = userId;
         this.startDate = startDate;
         this.endDate = endDate;
     }
 
     // Getters and Setters
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 
