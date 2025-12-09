@@ -3,6 +3,8 @@ package com.uade.comedor.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import com.uade.comedor.service.ReservationService;
 import com.uade.comedor.entity.Reservation;
@@ -35,11 +37,22 @@ public class ReservationController {
         return ResponseEntity.ok(reservations);
     }
 
-    // GET /reservations/mine?userId=...
-    // Modificado para devolver solo reservas activas y recientes (últimos 2 días)
+    // GET /reservations/mine - Obtener mis reservas (del JWT)
+    // Requiere autenticación JWT - El userId se extrae automáticamente del token
     @GetMapping("/mine")
-    public ResponseEntity<List<Reservation>> getMyReservations(@RequestParam Long userId) {
+    public ResponseEntity<List<Reservation>> getMyReservations() {
+        // Obtener el userId del contexto de seguridad (autenticación JWT)
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = authentication.getName(); // El userId está en el "name" del Authentication
+        
         List<Reservation> reservations = reservationService.getActiveAndRecentReservationsByUser(userId);
+        return ResponseEntity.ok(reservations);
+    }
+
+    // GET /reservations/userId/{userId} - Obtener reservas por userId específico
+    @GetMapping("/userId/{userId}")
+    public ResponseEntity<List<Reservation>> getReservationsByUserId(@PathVariable String userId) {
+        List<Reservation> reservations = reservationService.getReservationsByUser(userId);
         return ResponseEntity.ok(reservations);
     }
     

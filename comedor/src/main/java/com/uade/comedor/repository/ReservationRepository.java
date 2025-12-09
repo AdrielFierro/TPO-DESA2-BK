@@ -12,7 +12,7 @@ import java.util.List;
 
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
-    List<Reservation> findByUserId(Long userId);
+    List<Reservation> findByUserId(String userId);
     
     // Query para el sistema antiguo con MealTimeSlot
     @Query("SELECT COUNT(r) FROM Reservation r WHERE r.locationId = :locationId " +
@@ -52,7 +52,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "END, " +
            "CASE WHEN r.status = 'ACTIVA' THEN r.reservationDate END ASC, " +
            "CASE WHEN r.status <> 'ACTIVA' THEN r.reservationDate END DESC")
-    List<Reservation> findActiveAndRecentByUserId(@Param("userId") Long userId, 
+    List<Reservation> findActiveAndRecentByUserId(@Param("userId") String userId, 
                                                    @Param("twoDaysAgo") LocalDateTime twoDaysAgo);
     
     // Query para obtener reservas de un usuario entre dos fechas
@@ -60,7 +60,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "AND r.reservationDate >= :startDate " +
            "AND r.reservationDate <= :endDate " +
            "ORDER BY r.reservationDate DESC")
-    List<Reservation> findByUserIdAndDateBetween(@Param("userId") Long userId,
+    List<Reservation> findByUserIdAndDateBetween(@Param("userId") String userId,
                                                    @Param("startDate") LocalDateTime startDate,
                                                    @Param("endDate") LocalDateTime endDate);
     
@@ -78,7 +78,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "AND r.reservationDate < :endTime " +
            "AND r.status <> 'CANCELADA'")
     long countByUserIdAndMealTimeAndReservationDateBetween(
-            @Param("userId") Long userId,
+            @Param("userId") String userId,
             @Param("mealTime") MenuMeal.MealTime mealTime,
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime);

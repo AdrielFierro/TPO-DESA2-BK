@@ -6,7 +6,7 @@ import java.util.List;
 
 public class BillEventDTO {
     private Long billId;
-    private Long userId;
+    private String userId;
     private Long cartId;
     private Long reservationId;
     private BigDecimal subtotal;
@@ -19,7 +19,7 @@ public class BillEventDTO {
     public BillEventDTO() {
     }
 
-    public BillEventDTO(Long billId, Long userId, Long cartId, Long reservationId, 
+    public BillEventDTO(Long billId, String userId, Long cartId, Long reservationId, 
                         BigDecimal subtotal, BigDecimal totalWithDiscount, 
                         BigDecimal totalWithoutDiscount, LocalDateTime createdAt,
                         List<ProductEventDTO> products) {
@@ -43,11 +43,11 @@ public class BillEventDTO {
         this.billId = billId;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

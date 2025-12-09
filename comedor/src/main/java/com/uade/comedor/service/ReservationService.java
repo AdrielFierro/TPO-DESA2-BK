@@ -165,7 +165,7 @@ public class ReservationService {
     }
 
     // Get reservations for a specific user
-    public List<Reservation> getReservationsByUser(Long userId) {
+    public List<Reservation> getReservationsByUser(String userId) {
         List<Reservation> list = reservationRepository.findByUserId(userId);
         list.forEach(this::populateSlotTimes);
         return list;
@@ -276,7 +276,7 @@ public class ReservationService {
      * Nota: Las reservas ACTIVAS vencidas se marcan como AUSENTE automáticamente
      * por una tarea programada que se ejecuta cada 15 minutos
      */
-    public List<Reservation> getActiveAndRecentReservationsByUser(Long userId) {
+    public List<Reservation> getActiveAndRecentReservationsByUser(String userId) {
         LocalDateTime twoDaysAgo = LocalDateTime.now().minusDays(2);
         List<Reservation> list = reservationRepository.findActiveAndRecentByUserId(userId, twoDaysAgo);
         list.forEach(this::populateSlotTimes);
@@ -286,7 +286,7 @@ public class ReservationService {
     /**
      * Obtiene las reservas de un usuario entre dos fechas
      */
-    public List<Reservation> getReservationsByUserAndDateRange(Long userId, LocalDateTime startDate, LocalDateTime endDate) {
+    public List<Reservation> getReservationsByUserAndDateRange(String userId, LocalDateTime startDate, LocalDateTime endDate) {
         List<Reservation> list = reservationRepository.findByUserIdAndDateBetween(userId, startDate, endDate);
         list.forEach(this::populateSlotTimes);
         return list;

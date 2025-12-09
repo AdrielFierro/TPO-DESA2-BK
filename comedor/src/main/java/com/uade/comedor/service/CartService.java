@@ -15,7 +15,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -122,7 +121,7 @@ public class CartService {
         
         // Crear carrito
         Cart cart = new Cart();
-        cart.setUserId(1L); // TODO: Obtener del contexto de seguridad
+        cart.setUserId("00000000-0000-0000-0000-000000000000"); // TODO: Obtener del contexto de seguridad (JWT)
         cart.setPaymentMethod(request.getPaymentMethod());
         cart.setStatus(Cart.CartStatus.OPEN);
         cart.setProducts(products);
