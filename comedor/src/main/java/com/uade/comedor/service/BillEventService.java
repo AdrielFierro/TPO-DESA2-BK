@@ -2,6 +2,7 @@ package com.uade.comedor.service;
 
 import com.uade.comedor.dto.BillEventDTO;
 import com.uade.comedor.dto.BillEventDTO.ProductEventDTO;
+import com.uade.comedor.dto.EventEnvelope;
 import com.uade.comedor.entity.Bill;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,10 +30,18 @@ public class BillEventService {
         try {
             BillEventDTO eventDTO = convertToEventDTO(bill);
             
-            // Enviar el evento con routing key "bill.created"
-            rabbitTemplate.convertAndSend(billExchange, "bill.created", eventDTO);
+            // Crear el envelope con el evento
+            EventEnvelope<BillEventDTO> envelope = new EventEnvelope<>(
+                "bill.created",
+                bill.getCreatedAt(),
+                eventDTO
+            );
             
-            logger.info("Bill created event published successfully for bill ID: {}", bill.getId());
+            // Enviar el envelope con routing key "bill.created"
+            rabbitTemplate.convertAndSend(billExchange, "bill.created", envelope);
+            
+            logger.info("Bill created event published successfully for bill ID: {} with eventId: {}", 
+                bill.getId(), envelope.getEventId());
         } catch (Exception e) {
             logger.error("Error publishing bill created event for bill ID: {}", bill.getId(), e);
             // No lanzamos la excepción para no afectar el flujo principal

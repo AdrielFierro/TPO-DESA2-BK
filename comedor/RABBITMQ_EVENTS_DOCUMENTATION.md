@@ -46,7 +46,30 @@ Password: aGzLNMYhU72P22
 
 ---
 
-## 📤 Evento: Factura Creada
+## � Estructura del Envelope (Sobre)
+
+**IMPORTANTE:** Todos los eventos están envueltos en un **EventEnvelope** estándar que incluye metadata adicional.
+
+### **Campos del Envelope:**
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `eventId` | String (UUID) | ID único del evento generado automáticamente |
+| `eventType` | String | Tipo de evento (`bill.created`, `reservation.created`) |
+| `occurredAt` | LocalDateTime (ISO 8601) | Fecha y hora cuando ocurrió el evento original |
+| `emittedAt` | LocalDateTime (ISO 8601) | Fecha y hora cuando se emitió el evento a RabbitMQ |
+| `sourceModule` | String | Módulo que generó el evento (siempre `"Comedor"`) |
+| `payload` | Object | **Datos específicos del evento** (BillEventDTO o ReservationEventDTO) |
+
+### **¿Por qué usar Envelope?**
+- **Trazabilidad:** Cada evento tiene un ID único para tracking
+- **Auditoría:** Se registra cuándo ocurrió y cuándo se emitió
+- **Identificación:** Sabes de qué módulo viene sin analizar el payload
+- **Estandarización:** Todos los módulos usan el mismo formato
+
+---
+
+## �📤 Evento: Factura Creada
 
 ### **Routing Key:** `bill.created`
 ### **Exchange:** `bill.event`
@@ -54,35 +77,42 @@ Password: aGzLNMYhU72P22
 ### **¿Cuándo se dispara?**
 Cuando un usuario confirma un carrito, automáticamente se genera una factura y se publica este evento.
 
-### **Estructura del Mensaje (JSON):**
+### **Estructura del Mensaje (JSON) - CON ENVELOPE:**
 
 ```json
 {
-  "billId": 123,
-  "userId": "00debe32-abd2-45a8-bece-3d3b752fa140",
-  "cartId": 456,
-  "reservationId": 789,
-  "subtotal": 150.00,
-  "totalWithDiscount": 125.00,
-  "totalWithoutDiscount": 150.00,
-  "createdAt": "2025-12-09T20:30:00",
-  "products": [
-    {
-      "productId": 1,
-      "name": "Milanesa con puré",
-      "price": 75.00
-    },
-    {
-      "productId": 2,
-      "name": "Coca Cola",
-      "price": 50.00
-    },
-    {
-      "productId": 3,
-      "name": "Flan casero",
-      "price": 25.00
-    }
-  ]
+  "eventId": "550e8400-e29b-41d4-a716-446655440000",
+  "eventType": "bill.created",
+  "occurredAt": "2025-12-09T20:30:00",
+  "emittedAt": "2025-12-09T20:30:01",
+  "sourceModule": "Comedor",
+  "payload": {
+    "billId": 123,
+    "userId": "00debe32-abd2-45a8-bece-3d3b752fa140",
+    "cartId": 456,
+    "reservationId": 789,
+    "subtotal": 150.00,
+    "totalWithDiscount": 125.00,
+    "totalWithoutDiscount": 150.00,
+    "createdAt": "2025-12-09T20:30:00",
+    "products": [
+      {
+        "productId": 1,
+        "name": "Milanesa con puré",
+        "price": 75.00
+      },
+      {
+        "productId": 2,
+        "name": "Coca Cola",
+        "price": 50.00
+      },
+      {
+        "productId": 3,
+        "name": "Flan casero",
+        "price": 25.00
+      }
+    ]
+  }
 }
 ```
 
@@ -120,21 +150,28 @@ Cuando un usuario confirma un carrito, automáticamente se genera una factura y 
 ### **¿Cuándo se dispara?**
 Cuando un usuario crea una nueva reserva en el comedor.
 
-### **Estructura del Mensaje (JSON):**
+### **Estructura del Mensaje (JSON) - CON ENVELOPE:**
 
 ```json
 {
-  "reservationId": 45,
-  "userId": "00debe32-abd2-45a8-bece-3d3b752fa140",
-  "locationId": 1,
-  "mealTime": "ALMUERZO",
-  "reservationTimeSlot": "ALMUERZO_SLOT_1",
-  "reservationDate": "2025-12-10T12:00:00",
-  "status": "ACTIVA",
-  "cost": 25.00,
-  "createdAt": "2025-12-09T20:00:00",
-  "slotStartTime": "12:00:00",
-  "slotEndTime": "13:00:00"
+  "eventId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+  "eventType": "reservation.created",
+  "occurredAt": "2025-12-09T20:00:00",
+  "emittedAt": "2025-12-09T20:00:01",
+  "sourceModule": "Comedor",
+  "payload": {
+    "reservationId": 45,
+    "userId": "00debe32-abd2-45a8-bece-3d3b752fa140",
+    "locationId": 1,
+    "mealTime": "ALMUERZO",
+    "reservationTimeSlot": "ALMUERZO_SLOT_1",
+    "reservationDate": "2025-12-10T12:00:00",
+    "status": "ACTIVA",
+    "cost": 25.00,
+    "createdAt": "2025-12-09T20:00:00",
+    "slotStartTime": "12:00:00",
+    "slotEndTime": "13:00:00"
+  }
 }
 ```
 
@@ -176,15 +213,41 @@ Cuando un usuario crea una nueva reserva en el comedor.
 
 ## 📥 Cómo Consumir los Eventos
 
+### **IMPORTANTE: Los eventos vienen envueltos en EventEnvelope**
+
+Todos los eventos ahora incluyen metadata adicional. Debes extraer el `payload` para acceder a los datos del evento.
+
 ### **Opción 1: Spring Boot con RabbitMQ**
 
+#### **1. Crear la clase EventEnvelope genérica:**
+```java
+public class EventEnvelope<T> {
+    private String eventId;
+    private String eventType;
+    private LocalDateTime occurredAt;
+    private LocalDateTime emittedAt;
+    private String sourceModule;
+    private T payload;
+    
+    // Getters y setters...
+}
+```
+
+#### **2. Consumir evento de Factura:**
 ```java
 @Component
 public class BillEventListener {
     
     @RabbitListener(queues = "tu-modulo.bill.queue")
-    public void handleBillCreated(BillEventDTO event) {
-        System.out.println("Nueva factura recibida: " + event.getBillId());
+    public void handleBillCreated(EventEnvelope<BillEventDTO> envelope) {
+        // Metadata del envelope
+        System.out.println("Event ID: " + envelope.getEventId());
+        System.out.println("Emitido desde: " + envelope.getSourceModule());
+        System.out.println("Tipo: " + envelope.getEventType());
+        
+        // Datos específicos del evento
+        BillEventDTO event = envelope.getPayload();
+        System.out.println("Nueva factura: " + event.getBillId());
         System.out.println("Usuario: " + event.getUserId());
         System.out.println("Total: $" + event.getTotalWithDiscount());
         
@@ -192,14 +255,23 @@ public class BillEventListener {
     }
 }
 
+#### **3. Consumir evento de Reserva:**
+```java
 @Component
 public class ReservationEventListener {
     
     @RabbitListener(queues = "tu-modulo.reservation.queue")
-    public void handleReservationCreated(ReservationEventDTO event) {
-        System.out.println("Nueva reserva recibida: " + event.getReservationId());
+    public void handleReservationCreated(EventEnvelope<ReservationEventDTO> envelope) {
+        // Metadata del envelope
+        System.out.println("Event ID: " + envelope.getEventId());
+        System.out.println("Evento ocurrió: " + envelope.getOccurredAt());
+        
+        // Datos específicos del evento
+        ReservationEventDTO event = envelope.getPayload();
+        System.out.println("Nueva reserva: " + event.getReservationId());
         System.out.println("Usuario: " + event.getUserId());
         System.out.println("Fecha: " + event.getReservationDate());
+        System.out.println("Comida: " + event.getMealTime());
         
         // Tu lógica aquí...
     }
