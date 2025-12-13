@@ -49,8 +49,8 @@ public class ReservationController {
         return ResponseEntity.ok(reservations);
     }
 
-    // GET /reservations/userId/{userId} - Obtener reservas por userId específico
-    @GetMapping("/userId/{userId}")
+    // GET /reservations/userid/{userId} - Obtener reservas por userId específico
+    @GetMapping("/userid/{userId}")
     public ResponseEntity<List<Reservation>> getReservationsByUserId(@PathVariable String userId) {
         List<Reservation> reservations = reservationService.getReservationsByUser(userId);
         return ResponseEntity.ok(reservations);

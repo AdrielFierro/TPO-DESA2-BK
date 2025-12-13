@@ -1,5 +1,6 @@
 package com.uade.comedor.service;
 
+import com.uade.comedor.dto.EventEnvelope;
 import com.uade.comedor.dto.ReservationEventDTO;
 import com.uade.comedor.entity.Reservation;
 import org.slf4j.Logger;
@@ -26,10 +27,18 @@ public class ReservationEventService {
         try {
             ReservationEventDTO eventDTO = convertToEventDTO(reservation);
             
-            // Enviar el evento con routing key "reservation.created"
-            rabbitTemplate.convertAndSend(reservationExchange, "reservation.created", eventDTO);
+            // Crear el envelope con el evento
+            EventEnvelope<ReservationEventDTO> envelope = new EventEnvelope<>(
+                "reservation.created",
+                reservation.getCreatedAt(),
+                eventDTO
+            );
             
-            logger.info("Reservation created event published successfully for reservation ID: {}", reservation.getId());
+            // Enviar el envelope con routing key "reservation.created"
+            rabbitTemplate.convertAndSend(reservationExchange, "reservation.created", envelope);
+            
+            logger.info("Reservation created event published successfully for reservation ID: {} with eventId: {}", 
+                reservation.getId(), envelope.getEventId());
         } catch (Exception e) {
             logger.error("Error publishing reservation created event for reservation ID: {}", reservation.getId(), e);
             // No lanzamos la excepción para no afectar el flujo principal
