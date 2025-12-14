@@ -228,7 +228,12 @@ public class ReservationService {
         Reservation r = reservationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
         r.setStatus(Reservation.ReservationStatus.CANCELADA);
-        return reservationRepository.save(r);
+        Reservation savedReservation = reservationRepository.save(r);
+        
+        // Publicar evento de reserva actualizada (cancelada)
+        reservationEventService.publishReservationUpdatedEvent(savedReservation);
+        
+        return savedReservation;
     }
 
     public Reservation confirmReservation(Long id) {
