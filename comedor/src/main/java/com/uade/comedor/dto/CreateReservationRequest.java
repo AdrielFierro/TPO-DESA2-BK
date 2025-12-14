@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 
 public class CreateReservationRequest {
     private String userId;
-    private String locationId; // UUID from backoffice
+    private String locationId; // UUID de la sede
     private MenuMeal.MealTime mealTime; // DESAYUNO, ALMUERZO, MERIENDA, CENA
     private LocalDateTime reservationDate; // Fecha y hora específica de la reserva
     

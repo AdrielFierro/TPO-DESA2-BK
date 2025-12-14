@@ -272,13 +272,11 @@ public class ReservationService {
 
     /**
      * Obtiene el costo que tendrá una nueva reserva.
-     * TODO: Este método más adelante llamará a un endpoint externo para obtener el costo dinámico.
-     * Por ahora retorna 25 hardcodeado.
+     * Llama al endpoint externo del módulo de Backoffice para obtener el costo dinámico.
+     * Si falla, retorna 25 como fallback.
      */
     public BigDecimal getNextReservationCost() {
-        // TODO: llamar al endpoint externo del módulo interno
-        // return externalApiService.getReservationCostFromExternalModule();
-        return BigDecimal.valueOf(25);
+        return externalApiService.getReservationCost();
     }
     
     /**

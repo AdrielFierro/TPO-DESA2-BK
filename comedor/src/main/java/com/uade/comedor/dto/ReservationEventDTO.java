@@ -7,7 +7,7 @@ import java.time.LocalTime;
 public class ReservationEventDTO {
     private Long reservationId;
     private String userId;
-    private String locationId; // UUID from backoffice
+    private String locationId; // UUID de la sede
     private String mealTime;
     private String reservationTimeSlot;
     private LocalDateTime reservationDate;

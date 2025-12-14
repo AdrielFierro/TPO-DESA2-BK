@@ -28,14 +28,26 @@ public class LocationService {
     }
 
     // Locations are now fetched from backoffice API, no hardcoded initialization needed
+    @Autowired
+    private ExternalApiService externalApiService;
 
+    /**
+     * Obtiene todas las sedes desde el backoffice.
+     * En caso de error (por ejemplo en tests), retorna una lista vacía.
+     */
     public List<Location> getAllLocations() {
-        return locationRepository.findAll();
+        try {
+            return externalApiService.getLocationsFromBackoffice();
+        } catch (Exception e) {
+            // En tests o si el backoffice no está disponible, retornar lista vacía
+            System.err.println("No se pudieron obtener sedes del backoffice: " + e.getMessage());
+            return new ArrayList<>();
+        }
     }
 
     public Location getLocationById(String id) {
         return locationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Location not found"));
+                .orElseThrow(() -> new RuntimeException("Location not found with id: " + id));
     }
 
     public List<TimeSlotAvailabilityDTO> getAvailability(String locationId, MenuMeal.MealTime mealTime, LocalDateTime date) {
