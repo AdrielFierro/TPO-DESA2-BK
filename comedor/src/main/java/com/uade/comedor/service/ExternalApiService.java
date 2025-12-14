@@ -349,11 +349,10 @@ public class ExternalApiService {
       return locations;
       
     } catch (RuntimeException e) {
-      // Re-lanzar las excepciones de negocio
       throw e;
     } catch (Exception e) {
       System.err.println("Error al conectar con el servicio de backoffice: " + e.getMessage());
-      throw new RuntimeException("No se pudieron obtener las sedes: error de conexión con el servicio externo", e);
+      throw new RuntimeException("No se pudieron obtener las sedes: error de conexion con el servicio externo", e);
     }
   }
 }
