@@ -19,7 +19,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "AND r.reservationTimeSlot = :timeSlot " +
            "AND DATE(r.reservationDate) = DATE(:date) " +
            "AND r.status <> 'CANCELADA'")
-    long countByLocationAndTimeSlot(@Param("locationId") Long locationId,
+    long countByLocationAndTimeSlot(@Param("locationId") String locationId,
                                      @Param("timeSlot") MealTimeSlot timeSlot,
                                      @Param("date") LocalDateTime date);
     
@@ -30,7 +30,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "AND r.reservationDate < :endTime " +
            "AND r.status <> 'CANCELADA'")
     long countByLocationIdAndMealTimeAndReservationDateBetween(
-            @Param("locationId") Long locationId,
+            @Param("locationId") String locationId,
             @Param("mealTime") MenuMeal.MealTime mealTime,
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime);

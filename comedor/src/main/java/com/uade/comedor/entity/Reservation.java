@@ -15,8 +15,8 @@ public class Reservation {
     @Column(nullable = false)
     private String userId;
 
-    @Column(nullable = false)
-    private Long locationId; // Referencia a Location
+    @Column(nullable = false, length = 36)
+    private String locationId; // Referencia a Location (UUID)
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -66,11 +66,11 @@ public class Reservation {
         this.userId = userId;
     }
 
-    public Long getLocationId() {
+    public String getLocationId() {
         return locationId;
     }
 
-    public void setLocationId(Long locationId) {
+    public void setLocationId(String locationId) {
         this.locationId = locationId;
     }
 

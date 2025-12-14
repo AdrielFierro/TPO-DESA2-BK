@@ -1,6 +1,9 @@
 package com.uade.comedor.service;
 
 import com.uade.comedor.dto.ParametroDTO;
+import com.uade.comedor.dto.SedeDTO;
+import com.uade.comedor.entity.Location;
+import com.uade.comedor.repository.LocationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -104,6 +107,60 @@ public class ExternalApiService {
     } catch (Exception e) {
       log.error("Error al conectar con el servicio de backoffice: {}", e.getMessage());
       throw new RuntimeException("No se pudo recuperar el costo de la reserva: error de conexión con el servicio externo", e);
+    }
+  }
+
+  /**
+   * Obtiene las sedes desde el módulo de Backoffice.
+   * Lanza excepción si no puede obtener las sedes.
+   */
+  public List<Location> getLocationsFromBackoffice() {
+    try {
+      String sedesUrl = "https://backoffice-production-df78.up.railway.app/api/v1/sedes/?skip=0&limit=100";
+      log.info("Obteniendo sedes desde: {}", sedesUrl);
+      
+      WebClient backofficeClient = WebClient.builder().build();
+      
+      List<SedeDTO> sedes = backofficeClient.get()
+          .uri(sedesUrl)
+          .retrieve()
+          .bodyToMono(new ParameterizedTypeReference<List<SedeDTO>>() {})
+          .block();
+      
+      if (sedes == null || sedes.isEmpty()) {
+        log.error("No se pudieron obtener sedes del backoffice");
+        throw new RuntimeException("No se pudieron obtener las sedes: respuesta vacía del servicio");
+      }
+      
+      log.info("Se obtuvieron {} sedes del backoffice", sedes.size());
+      
+      // Convertir SedeDTO a Location (solo las activas)
+      List<Location> locations = new java.util.ArrayList<>();
+      for (SedeDTO sedeDTO : sedes) {
+        if (Boolean.TRUE.equals(sedeDTO.getStatus())) {
+          Location location = new Location();
+          location.setId(sedeDTO.getIdSede());
+          location.setName(sedeDTO.getNombre());
+          location.setAddress(sedeDTO.getUbicacion());
+          location.setCapacity(10); // Capacidad por defecto
+          locations.add(location);
+        }
+      }
+      
+      if (locations.isEmpty()) {
+        log.error("No se encontraron sedes activas en el backoffice");
+        throw new RuntimeException("No se pudieron obtener las sedes: no hay sedes activas disponibles");
+      }
+      
+      log.info("Se obtuvieron {} sedes activas", locations.size());
+      return locations;
+      
+    } catch (RuntimeException e) {
+      // Re-lanzar las excepciones de negocio
+      throw e;
+    } catch (Exception e) {
+      log.error("Error al conectar con el servicio de backoffice: {}", e.getMessage());
+      throw new RuntimeException("No se pudieron obtener las sedes: error de conexión con el servicio externo", e);
     }
   }
 }
