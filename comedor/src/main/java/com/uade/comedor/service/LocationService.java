@@ -32,16 +32,25 @@ public class LocationService {
     private ExternalApiService externalApiService;
 
     /**
-     * Obtiene todas las sedes desde el backoffice.
-     * En caso de error (por ejemplo en tests), retorna una lista vacía.
+     * Obtiene todas las sedes desde el backoffice y las sincroniza con la base de datos local.
+     * En caso de error (por ejemplo en tests), retorna las locations de la BD local.
      */
     public List<Location> getAllLocations() {
         try {
-            return externalApiService.getLocationsFromBackoffice();
+            List<Location> locationsFromBackoffice = externalApiService.getLocationsFromBackoffice();
+            
+            // Sincronizar con la base de datos local
+            // Guardar o actualizar cada location
+            for (Location location : locationsFromBackoffice) {
+                locationRepository.save(location);
+            }
+            
+            return locationsFromBackoffice;
         } catch (Exception e) {
-            // En tests o si el backoffice no está disponible, retornar lista vacía
+            // En caso de error, retornar las locations de la BD local como fallback
             System.err.println("No se pudieron obtener sedes del backoffice: " + e.getMessage());
-            return new ArrayList<>();
+            System.err.println("Usando locations de la base de datos local como fallback");
+            return locationRepository.findAll();
         }
     }
 
