@@ -27,13 +27,13 @@ public class LocationController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Location> getLocationById(@PathVariable Long id) {
+    public ResponseEntity<Location> getLocationById(@PathVariable String id) {
         return ResponseEntity.ok(locationService.getLocationById(id));
     }
 
     @GetMapping("/{id}/availability")
     public ResponseEntity<List<TimeSlotAvailabilityDTO>> getAvailability(
-            @PathVariable Long id,
+            @PathVariable String id,
             @RequestParam MenuMeal.MealTime mealTime,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date) {
         return ResponseEntity.ok(locationService.getAvailability(id, mealTime, date));
