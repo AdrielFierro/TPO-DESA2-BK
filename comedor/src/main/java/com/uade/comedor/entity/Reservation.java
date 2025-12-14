@@ -15,8 +15,6 @@ public class Reservation {
     @Column(nullable = false)
     private String userId;
 
-    @Column(nullable = false)
-    private String locationId; // UUID from backoffice
     @Column(nullable = false, length = 36)
     private String locationId; // UUID from backoffice
 
