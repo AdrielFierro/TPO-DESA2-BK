@@ -39,7 +39,26 @@ public class SecurityConfig {
                     "/swagger-ui.html",
                     "/static/openapi.yaml"
                 ).permitAll()
-                // Todos los demás endpoints requieren autenticación JWT
+                
+                // Endpoints que requieren SUBROL_CAJERO
+                .requestMatchers(
+                    "/reservations/confirmation/**",
+                    "/carts/confirmation/**"
+                ).hasAuthority("SUBROL_CAJERO")
+                
+                // Endpoints que requieren SUBROL_CHEF (productos y edición de menús)
+                .requestMatchers(
+                    "/products/**",
+                    "/menus"
+                ).hasAuthority("SUBROL_CHEF")
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/menus/**").hasAuthority("SUBROL_CHEF")
+                .requestMatchers(org.springframework.http.HttpMethod.PUT, "/menus/**").hasAuthority("SUBROL_CHEF")
+                .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/menus/**").hasAuthority("SUBROL_CHEF")
+                .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/menus/**").hasAuthority("SUBROL_CHEF")
+                .requestMatchers(org.springframework.http.HttpMethod.PUT, "/meal-schedules/**").hasAuthority("SUBROL_CHEF")
+                
+                // Resto de endpoints solo requieren autenticación (sin importar subrol)
+                // Incluye: crear reservas, ver menús, locations, carts (crear/ver/editar/eliminar)
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

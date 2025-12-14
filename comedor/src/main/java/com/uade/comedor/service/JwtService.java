@@ -48,6 +48,14 @@ public class JwtService {
     }
 
     /**
+     * Extrae el subrol del JWT
+     */
+    public String extractSubrol(String token) {
+        Map<String, Object> claims = extractAllClaims(token);
+        return (String) claims.get("subrol");
+    }
+
+    /**
      * Extrae el wallet UUID del JWT
      * El wallet viene como un array, tomamos el primer elemento
      */
