@@ -30,8 +30,17 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) // desactiva CSRF para APIs REST
             .cors(Customizer.withDefaults()) // habilita CORS usando el bean corsConfigurationSource
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/reservations/mine").authenticated() // Requiere autenticación JWT
-                .anyRequest().permitAll() // Resto de endpoints sin autenticación
+                // Endpoints públicos (sin autenticación)
+                .requestMatchers(
+                    "/actuator/health/**",
+                    "/actuator/info",
+                    "/v3/api-docs/**",
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/static/openapi.yaml"
+                ).permitAll()
+                // Todos los demás endpoints requieren autenticación JWT
+                .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .httpBasic(httpBasic -> httpBasic.disable()) // Deshabilita HTTP Basic
