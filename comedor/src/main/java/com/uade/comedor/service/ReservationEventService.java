@@ -45,6 +45,28 @@ public class ReservationEventService {
         }
     }
 
+    public void publishReservationUpdatedEvent(Reservation reservation) {
+        try {
+            ReservationEventDTO eventDTO = convertToEventDTO(reservation);
+            
+            // Crear el envelope con el evento
+            EventEnvelope<ReservationEventDTO> envelope = new EventEnvelope<>(
+                "reservation.updated",
+                java.time.LocalDateTime.now(),
+                eventDTO
+            );
+            
+            // Enviar el envelope con routing key "reservation.updated"
+            rabbitTemplate.convertAndSend(reservationExchange, "reservation.updated", envelope);
+            
+            logger.info("Reservation updated event published successfully for reservation ID: {} with eventId: {}", 
+                reservation.getId(), envelope.getEventId());
+        } catch (Exception e) {
+            logger.error("Error publishing reservation updated event for reservation ID: {}", reservation.getId(), e);
+            // No lanzamos la excepción para no afectar el flujo principal
+        }
+    }
+
     private ReservationEventDTO convertToEventDTO(Reservation reservation) {
         return new ReservationEventDTO(
                 reservation.getId(),
