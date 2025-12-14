@@ -275,8 +275,8 @@ public class ReservationService {
      * Llama al endpoint externo del módulo de Backoffice para obtener el costo dinámico.
      * Si falla, retorna 25 como fallback.
      */
-    public BigDecimal getNextReservationCost() {
-        return externalApiService.getReservationCost();
+    public BigDecimal getNextReservationCost(String jwtToken) {
+        return externalApiService.getReservationCost(jwtToken);
     }
     
     /**
