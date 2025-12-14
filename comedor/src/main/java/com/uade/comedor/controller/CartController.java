@@ -45,8 +45,24 @@ public class CartController {
     }
 
     @PostMapping("/confirmation/{id}")
-    public ResponseEntity<Bill> confirmCart(@PathVariable Long id) {
-        Bill bill = cartService.confirmCart(id);
+    public ResponseEntity<Bill> confirmCart(
+            @PathVariable Long id,
+            @org.springframework.web.bind.annotation.RequestHeader("Authorization") String authorizationHeader) {
+        // Obtener el walletId del contexto de autenticación
+        org.springframework.security.core.Authentication authentication = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String walletId = null;
+        
+        if (authentication instanceof com.uade.comedor.security.UserAuthenticationToken) {
+            walletId = ((com.uade.comedor.security.UserAuthenticationToken) authentication).getWalletId();
+        }
+        
+        // Extraer el token (remover "Bearer " si existe)
+        String token = authorizationHeader.startsWith("Bearer ") 
+            ? authorizationHeader.substring(7) 
+            : authorizationHeader;
+        
+        Bill bill = cartService.confirmCart(id, walletId, token);
         return new ResponseEntity<>(bill, HttpStatus.CREATED);
     }
 

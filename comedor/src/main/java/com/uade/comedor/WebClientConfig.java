@@ -8,13 +8,12 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class WebClientConfig {
 
   @Bean
-  public WebClient webClient() {
-    return WebClient.builder().build();
+  public WebClient.Builder webClientBuilder() {
+    return WebClient.builder();
   }
 
-  // Si preferís inyectar el builder:
-  // @Bean
-  // public WebClient.Builder webClientBuilder() {
-  //   return WebClient.builder();
-  // }
+  @Bean
+  public WebClient webClient(WebClient.Builder builder) {
+    return builder.build();
+  }
 }

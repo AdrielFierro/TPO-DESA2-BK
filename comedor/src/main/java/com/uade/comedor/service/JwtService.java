@@ -48,6 +48,29 @@ public class JwtService {
     }
 
     /**
+     * Extrae el wallet UUID del JWT
+     * El wallet viene como un array, tomamos el primer elemento
+     */
+    @SuppressWarnings("unchecked")
+    public String extractWalletId(String token) {
+        Map<String, Object> claims = extractAllClaims(token);
+        Object walletObj = claims.get("wallet");
+        
+        if (walletObj == null) {
+            return null;
+        }
+        
+        // El wallet viene como un array, tomamos el primer elemento
+        if (walletObj instanceof java.util.List) {
+            java.util.List<String> wallets = (java.util.List<String>) walletObj;
+            return wallets.isEmpty() ? null : wallets.get(0);
+        }
+        
+        // Si por alguna razón viene como String directo
+        return walletObj.toString();
+    }
+
+    /**
      * Valida si el token es válido (sin verificar firma)
      */
     public boolean validateToken(String token) {

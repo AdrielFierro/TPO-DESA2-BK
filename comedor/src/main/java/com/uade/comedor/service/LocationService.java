@@ -2,17 +2,13 @@ package com.uade.comedor.service;
 
 import com.uade.comedor.entity.Location;
 import com.uade.comedor.entity.MenuMeal;
-import com.uade.comedor.entity.MealTimeSlot;
 import com.uade.comedor.repository.LocationRepository;
 import com.uade.comedor.repository.ReservationRepository;
 import com.uade.comedor.dto.TimeSlotAvailabilityDTO;
-import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -31,6 +27,7 @@ public class LocationService {
         this.locationRepository = locationRepository;
     }
 
+    // Locations are now fetched from backoffice API, no hardcoded initialization needed
     @Autowired
     private ExternalApiService externalApiService;
 

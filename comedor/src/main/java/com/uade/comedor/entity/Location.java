@@ -6,8 +6,7 @@ import jakarta.persistence.*;
 @Table(name = "locations")
 public class Location {
     @Id
-    @Column(length = 36)
-    private String id; // UUID del sistema externo
+    private String id; // UUID from backoffice
 
     @Column(nullable = false)
     private String name;

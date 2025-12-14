@@ -10,6 +10,7 @@ import com.uade.comedor.service.ReservationService;
 import com.uade.comedor.entity.Reservation;
 import com.uade.comedor.dto.CreateReservationRequest;
 import com.uade.comedor.dto.ReservationDateRangeRequest;
+import com.uade.comedor.security.UserAuthenticationToken;
 
 
 import java.time.LocalDateTime;
@@ -25,8 +26,27 @@ public class ReservationController {
     private ReservationService reservationService;
 
     @PostMapping
-    public ResponseEntity<Reservation> createReservation(@RequestBody CreateReservationRequest request) {
-        Reservation reservation = reservationService.createReservation(request);
+    public ResponseEntity<Reservation> createReservation(
+            @RequestBody CreateReservationRequest request,
+            @RequestHeader("Authorization") String authorizationHeader) {
+        // Obtener el userId y walletId del contexto de autenticación (JWT)
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = authentication.getName(); // El userId está en el "name" del Authentication
+        String walletId = null;
+        
+        if (authentication instanceof UserAuthenticationToken) {
+            walletId = ((UserAuthenticationToken) authentication).getWalletId();
+        }
+        
+        // Establecer el userId del JWT en el request (sobrescribe si viene en el body)
+        request.setUserId(userId);
+        
+        // Extraer el token (remover "Bearer " si existe)
+        String token = authorizationHeader.startsWith("Bearer ") 
+            ? authorizationHeader.substring(7) 
+            : authorizationHeader;
+        
+        Reservation reservation = reservationService.createReservation(request, walletId, token);
         return ResponseEntity.ok(reservation);
     }
 
