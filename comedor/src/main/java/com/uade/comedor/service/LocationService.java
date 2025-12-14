@@ -31,49 +31,23 @@ public class LocationService {
         this.locationRepository = locationRepository;
     }
 
-    @PostConstruct
-    @Transactional
-    public void initializeLocations() {
-        // Inicializar locations hardcodeadas si no existen
-        if (locationRepository.count() == 0) {
-            Location norte = new Location();
-            norte.setName("Norte");
-            norte.setCapacity(10);
-            norte.setAddress("Avenida Norte 456");
-            locationRepository.save(norte);
+    @Autowired
+    private ExternalApiService externalApiService;
 
-            Location sur = new Location();
-            sur.setName("Sur");
-            sur.setCapacity(10);
-            sur.setAddress("Calle Principal 123");
-            locationRepository.save(sur);
-        }
-
-        // Backfill de address para registros existentes sin address
-        for (Location loc : locationRepository.findAll()) {
-            if (loc.getAddress() == null || loc.getAddress().trim().isEmpty()) {
-                if ("Norte".equalsIgnoreCase(loc.getName())) {
-                    loc.setAddress("Avenida Norte 456");
-                } else if ("Sur".equalsIgnoreCase(loc.getName())) {
-                    loc.setAddress("Calle Principal 123");
-                } else {
-                    throw new IllegalStateException("Location sin address: id=" + loc.getId() + ", name=" + loc.getName());
-                }
-                locationRepository.save(loc);
-            }
-        }
-    }
-
+    /**
+     * Obtiene todas las sedes desde el backoffice.
+     * Si falla, lanza una excepción.
+     */
     public List<Location> getAllLocations() {
-        return locationRepository.findAll();
+        return externalApiService.getLocationsFromBackoffice();
     }
 
-    public Location getLocationById(Long id) {
+    public Location getLocationById(String id) {
         return locationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Location not found"));
+                .orElseThrow(() -> new RuntimeException("Location not found with id: " + id));
     }
 
-    public List<TimeSlotAvailabilityDTO> getAvailability(Long locationId, MenuMeal.MealTime mealTime, LocalDateTime date) {
+    public List<TimeSlotAvailabilityDTO> getAvailability(String locationId, MenuMeal.MealTime mealTime, LocalDateTime date) {
         Location location = getLocationById(locationId);
         
         // Obtener los time slots dinámicamente basados en el schedule configurado
