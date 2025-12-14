@@ -6,8 +6,7 @@ import jakarta.persistence.*;
 @Table(name = "locations")
 public class Location {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id; // UUID from backoffice
 
     @Column(nullable = false)
     private String name;
@@ -19,11 +18,11 @@ public class Location {
     private Integer capacity; // capacidad máxima de asientos por hora
 
     // Getters and Setters
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 

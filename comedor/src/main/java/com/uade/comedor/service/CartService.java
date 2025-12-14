@@ -24,13 +24,16 @@ public class CartService {
     private final ProductRepository productRepository;
     private final BillService billService;
     private final ReservationRepository reservationRepository;
+    private final WalletService walletService;
     
     public CartService(CartRepository cartRepository, ProductRepository productRepository, 
-                      BillService billService, ReservationRepository reservationRepository) {
+                      BillService billService, ReservationRepository reservationRepository,
+                      WalletService walletService) {
         this.cartRepository = cartRepository;
         this.productRepository = productRepository;
         this.billService = billService;
         this.reservationRepository = reservationRepository;
+        this.walletService = walletService;
     }
     
 
@@ -162,12 +165,20 @@ public class CartService {
     }
 
     @Transactional
-    public Bill confirmCart(Long id) {
+    public Bill confirmCart(Long id, String walletId, String jwtToken) {
         Cart cart = cartRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Carrito no encontrado"));
             
         if (cart.getStatus() != Cart.CartStatus.OPEN) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se pueden confirmar carritos abiertos");
+        }
+
+        // Realizar el cobro en la wallet ANTES de confirmar el carrito (pasando el token JWT)
+        try {
+            walletService.chargeOrder(walletId, cart.getTotal(), null, jwtToken); // null porque aún no tenemos el billId
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                "No se pudo realizar el cobro en la wallet: " + e.getMessage(), e);
         }
 
         // Si el carrito tiene una reserva asociada, confirmarla automáticamente

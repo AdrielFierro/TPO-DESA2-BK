@@ -31,7 +31,10 @@ public class ReservationService {
     @Autowired
     private ReservationEventService reservationEventService;
 
-    public Reservation createReservation(CreateReservationRequest request) {
+    @Autowired
+    private WalletService walletService;
+
+    public Reservation createReservation(CreateReservationRequest request, String walletId, String jwtToken) {
         LocalTime reservationTime = request.getReservationDate().toLocalTime();
         
         // Validar que la fecha de la reserva no sea en el pasado
@@ -111,27 +114,38 @@ public class ReservationService {
         // Determinar el MealTimeSlot enum basado en el slot calculado (para compatibilidad)
         MealTimeSlot timeSlotEnum = determineTimeSlotEnum(request.getMealTime(), targetSlot.getStartTime());
 
-    // Crear reserva
-    Reservation reservation = new Reservation();
-    reservation.setUserId(request.getUserId());
-    reservation.setLocationId(request.getLocationId());
-    reservation.setMealTime(request.getMealTime());
-    reservation.setReservationTimeSlot(timeSlotEnum);
-    reservation.setReservationDate(request.getReservationDate());
-    reservation.setStatus(Reservation.ReservationStatus.ACTIVA);
-    reservation.setCost(externalApiService.getReservationCost());
-    reservation.setCreatedAt(LocalDateTime.now());
+        // Obtener el costo de la reserva desde backoffice (pasando el token JWT)
+        BigDecimal reservationCost = externalApiService.getReservationCost(jwtToken);
+
+        // Realizar el cobro en la wallet ANTES de crear la reserva (pasando el token JWT)
+        try {
+            walletService.chargeReservation(walletId, reservationCost, null, jwtToken); // null porque aún no tenemos el ID
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                "No se pudo realizar el cobro en la wallet: " + e.getMessage(), e);
+        }
+
+        // Crear reserva
+        Reservation reservation = new Reservation();
+        reservation.setUserId(request.getUserId());
+        reservation.setLocationId(request.getLocationId());
+        reservation.setMealTime(request.getMealTime());
+        reservation.setReservationTimeSlot(timeSlotEnum);
+        reservation.setReservationDate(request.getReservationDate());
+        reservation.setStatus(Reservation.ReservationStatus.ACTIVA);
+        reservation.setCost(reservationCost);
+        reservation.setCreatedAt(LocalDateTime.now());
         
-    // Guardar horarios explícitos del slot para el frontend
-    reservation.setSlotStartTime(targetSlot.getStartTime());
-    reservation.setSlotEndTime(targetSlot.getEndTime());
+        // Guardar horarios explícitos del slot para el frontend
+        reservation.setSlotStartTime(targetSlot.getStartTime());
+        reservation.setSlotEndTime(targetSlot.getEndTime());
         
-    Reservation savedReservation = reservationRepository.save(reservation);
-    
-    // Publicar evento de reserva creada
-    reservationEventService.publishReservationCreatedEvent(savedReservation);
-    
-    return savedReservation;
+        Reservation savedReservation = reservationRepository.save(reservation);
+        
+        // Publicar evento de reserva creada
+        reservationEventService.publishReservationCreatedEvent(savedReservation);
+        
+        return savedReservation;
     }
     
     // Método helper para determinar el enum MealTimeSlot basado en mealTime y hora de inicio

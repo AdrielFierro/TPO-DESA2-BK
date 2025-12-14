@@ -2,17 +2,13 @@ package com.uade.comedor.service;
 
 import com.uade.comedor.entity.Location;
 import com.uade.comedor.entity.MenuMeal;
-import com.uade.comedor.entity.MealTimeSlot;
 import com.uade.comedor.repository.LocationRepository;
 import com.uade.comedor.repository.ReservationRepository;
 import com.uade.comedor.dto.TimeSlotAvailabilityDTO;
-import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -31,49 +27,18 @@ public class LocationService {
         this.locationRepository = locationRepository;
     }
 
-    @PostConstruct
-    @Transactional
-    public void initializeLocations() {
-        // Inicializar locations hardcodeadas si no existen
-        if (locationRepository.count() == 0) {
-            Location norte = new Location();
-            norte.setName("Norte");
-            norte.setCapacity(10);
-            norte.setAddress("Avenida Norte 456");
-            locationRepository.save(norte);
-
-            Location sur = new Location();
-            sur.setName("Sur");
-            sur.setCapacity(10);
-            sur.setAddress("Calle Principal 123");
-            locationRepository.save(sur);
-        }
-
-        // Backfill de address para registros existentes sin address
-        for (Location loc : locationRepository.findAll()) {
-            if (loc.getAddress() == null || loc.getAddress().trim().isEmpty()) {
-                if ("Norte".equalsIgnoreCase(loc.getName())) {
-                    loc.setAddress("Avenida Norte 456");
-                } else if ("Sur".equalsIgnoreCase(loc.getName())) {
-                    loc.setAddress("Calle Principal 123");
-                } else {
-                    throw new IllegalStateException("Location sin address: id=" + loc.getId() + ", name=" + loc.getName());
-                }
-                locationRepository.save(loc);
-            }
-        }
-    }
+    // Locations are now fetched from backoffice API, no hardcoded initialization needed
 
     public List<Location> getAllLocations() {
         return locationRepository.findAll();
     }
 
-    public Location getLocationById(Long id) {
+    public Location getLocationById(String id) {
         return locationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Location not found"));
     }
 
-    public List<TimeSlotAvailabilityDTO> getAvailability(Long locationId, MenuMeal.MealTime mealTime, LocalDateTime date) {
+    public List<TimeSlotAvailabilityDTO> getAvailability(String locationId, MenuMeal.MealTime mealTime, LocalDateTime date) {
         Location location = getLocationById(locationId);
         
         // Obtener los time slots dinámicamente basados en el schedule configurado

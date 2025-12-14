@@ -6,7 +6,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.lang.NonNull;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -53,12 +52,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // Extraer información del usuario
                 String userId = jwtService.extractUserId(jwt);
                 String role = jwtService.extractRole(jwt);
+                String walletId = jwtService.extractWalletId(jwt);
                 
-                // Crear la autenticación
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                // Crear la autenticación con walletId
+                UserAuthenticationToken authToken = new UserAuthenticationToken(
                         userId,
                         null,
-                        Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
+                        Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role)),
+                        walletId
                 );
                 
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
