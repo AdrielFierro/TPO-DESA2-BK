@@ -8,7 +8,10 @@ import com.uade.comedor.entity.Reservation;
 import com.uade.comedor.repository.CartRepository;
 import com.uade.comedor.repository.ProductRepository;
 import com.uade.comedor.repository.ReservationRepository;
+import com.uade.comedor.security.UserAuthenticationToken;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -124,7 +127,18 @@ public class CartService {
         
         // Crear carrito
         Cart cart = new Cart();
-        cart.setUserId("00000000-0000-0000-0000-000000000000"); // TODO: Obtener del contexto de seguridad (JWT)
+        
+        // Obtener userId del contexto de seguridad (JWT)
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId;
+        if (authentication instanceof UserAuthenticationToken) {
+            // El principal contiene el userId extraído del JWT
+            userId = (String) authentication.getPrincipal();
+        } else {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado");
+        }
+        
+        cart.setUserId(userId);
         cart.setPaymentMethod(request.getPaymentMethod());
         cart.setStatus(Cart.CartStatus.OPEN);
         cart.setProducts(products);

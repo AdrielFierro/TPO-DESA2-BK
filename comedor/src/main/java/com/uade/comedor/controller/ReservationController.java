@@ -134,8 +134,15 @@ public class ReservationController {
     // GET /reservations/cost - obtiene el costo que tendrá una nueva reserva (sin parámetros)
     // Este endpoint será integrado con un módulo interno más adelante
     @GetMapping("/cost")
-    public ResponseEntity<java.math.BigDecimal> getNextReservationCost() {
-        java.math.BigDecimal cost = reservationService.getNextReservationCost();
+    public ResponseEntity<java.math.BigDecimal> getNextReservationCost(
+            @RequestHeader("Authorization") String authorizationHeader) {
+        // Extraer el token JWT del header Authorization (formato: "Bearer <token>")
+        String jwtToken = null;
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            jwtToken = authorizationHeader.substring(7);
+        }
+        
+        java.math.BigDecimal cost = reservationService.getNextReservationCost(jwtToken);
         return ResponseEntity.ok(cost);
     }
 
