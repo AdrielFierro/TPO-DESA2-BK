@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
 
 /**
  * Filtro para validar JWT en las peticiones
@@ -52,13 +51,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // Extraer información del usuario
                 String userId = jwtService.extractUserId(jwt);
                 String role = jwtService.extractRole(jwt);
+                String subrol = jwtService.extractSubrol(jwt);
                 String walletId = jwtService.extractWalletId(jwt);
+                
+                // Crear authorities: incluir rol y subrol si existe
+                java.util.List<SimpleGrantedAuthority> authorities = new java.util.ArrayList<>();
+                if (role != null) {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+                }
+                if (subrol != null) {
+                    authorities.add(new SimpleGrantedAuthority("SUBROL_" + subrol));
+                }
                 
                 // Crear la autenticación con walletId
                 UserAuthenticationToken authToken = new UserAuthenticationToken(
                         userId,
                         null,
-                        Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role)),
+                        authorities,
                         walletId
                 );
                 
