@@ -1,6 +1,6 @@
 package com.uade.comedor.service;
 
-import com.uade.comedor.dto.SedeDTO;
+import com.uade.comedor.dto.EspacioDTO;
 import com.uade.comedor.entity.Location;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -183,55 +183,62 @@ public class ExternalApiService {
   }
 
   /**
-   * Obtiene las sedes desde el módulo de Backoffice.
-   * Lanza excepción si no puede obtener las sedes.
+   * Obtiene los espacios tipo COMEDOR desde el módulo de Backoffice.
+   * Lanza excepción si no puede obtener los espacios.
    */
   public List<Location> getLocationsFromBackoffice() {
     try {
-      String sedesUrl = "https://backoffice-production-df78.up.railway.app/api/v1/sedes/?skip=0&limit=100";
-      System.out.println("Obteniendo sedes desde: " + sedesUrl);
+      String espaciosUrl = "https://backoffice-production-df78.up.railway.app/api/v1/espacios/?skip=0&limit=100&param=tipo&value=COMEDOR";
+      System.out.println("Obteniendo espacios tipo COMEDOR desde: " + espaciosUrl);
       
       WebClient backofficeClient = WebClient.builder().build();
       
-      List<SedeDTO> sedes = backofficeClient.get()
-          .uri(sedesUrl)
+      List<EspacioDTO> espacios = backofficeClient.get()
+          .uri(espaciosUrl)
           .retrieve()
-          .bodyToMono(new ParameterizedTypeReference<List<SedeDTO>>() {})
+          .bodyToMono(new ParameterizedTypeReference<List<EspacioDTO>>() {})
           .block();
       
-      if (sedes == null || sedes.isEmpty()) {
-        System.err.println("No se pudieron obtener sedes del backoffice");
-        throw new RuntimeException("No se pudieron obtener las sedes: respuesta vacía del servicio");
+      if (espacios == null || espacios.isEmpty()) {
+        System.err.println("No se pudieron obtener espacios del backoffice");
+        throw new RuntimeException("No se pudieron obtener los espacios: respuesta vacia del servicio");
       }
       
-      System.out.println("Se obtuvieron " + sedes.size() + " sedes del backoffice");
+      System.out.println("Se obtuvieron " + espacios.size() + " espacios del backoffice");
       
-      // Convertir SedeDTO a Location (solo las activas)
+      // Convertir EspacioDTO a Location (solo los activos y disponibles)
       List<Location> locations = new java.util.ArrayList<>();
-      for (SedeDTO sedeDTO : sedes) {
-        if (Boolean.TRUE.equals(sedeDTO.getStatus())) {
+      for (EspacioDTO espacio : espacios) {
+        if (Boolean.TRUE.equals(espacio.getStatus()) && "DISPONIBLE".equals(espacio.getEstado())) {
           Location location = new Location();
-          location.setId(sedeDTO.getIdSede());
-          location.setName(sedeDTO.getNombre());
-          location.setAddress(sedeDTO.getUbicacion());
-          location.setCapacity(10); // Capacidad por defecto
+          location.setId(espacio.getIdEspacio());
+          location.setName(espacio.getNombre());
+          location.setAddress(espacio.getUbicacion());
+          
+          // Usar la capacidad del espacio, sin fallback
+          if (espacio.getCapacidad() == null) {
+            System.err.println("Espacio " + espacio.getIdEspacio() + " no tiene capacidad definida");
+            throw new RuntimeException("El espacio " + espacio.getNombre() + " no tiene capacidad configurada en el backoffice");
+          }
+          location.setCapacity(espacio.getCapacidad());
+          
           locations.add(location);
         }
       }
       
       if (locations.isEmpty()) {
-        System.err.println("No se encontraron sedes activas en el backoffice");
-        throw new RuntimeException("No se pudieron obtener las sedes: no hay sedes activas disponibles");
+        System.err.println("No se encontraron espacios activos y disponibles en el backoffice");
+        throw new RuntimeException("No se pudieron obtener los espacios: no hay espacios de tipo COMEDOR activos y disponibles");
       }
       
-      System.out.println("Se obtuvieron " + locations.size() + " sedes activas");
+      System.out.println("Se obtuvieron " + locations.size() + " espacios activos y disponibles");
       return locations;
       
     } catch (RuntimeException e) {
       throw e;
     } catch (Exception e) {
       System.err.println("Error al conectar con el servicio de backoffice: " + e.getMessage());
-      throw new RuntimeException("No se pudieron obtener las sedes del backoffice", e);
+      throw new RuntimeException("No se pudieron obtener los espacios del backoffice", e);
     }
   }
 }
