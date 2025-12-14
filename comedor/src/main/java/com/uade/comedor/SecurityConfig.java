@@ -47,10 +47,7 @@ public class SecurityConfig {
                 ).hasAuthority("SUBROL_CAJERO")
                 
                 // Endpoints que requieren SUBROL_CHEF (productos y edición de menús)
-                .requestMatchers(
-                    "/products/**",
-                    "/menus"
-                ).hasAuthority("SUBROL_CHEF")
+                .requestMatchers("/products/**").hasAuthority("SUBROL_CHEF")
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/menus/**").hasAuthority("SUBROL_CHEF")
                 .requestMatchers(org.springframework.http.HttpMethod.PUT, "/menus/**").hasAuthority("SUBROL_CHEF")
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/menus/**").hasAuthority("SUBROL_CHEF")
