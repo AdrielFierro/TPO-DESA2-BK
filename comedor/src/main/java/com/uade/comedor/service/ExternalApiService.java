@@ -49,72 +49,6 @@ public class ExternalApiService {
         .block();
   }
 
-  // Método para obtener el costo de la reserva desde backoffice
-  public java.math.BigDecimal getReservationCost(String jwtToken) {
-    try {
-      // ID del parámetro "Coste Reserva" en el backoffice
-      String parametroId = "35814d0d-692c-4b68-b524-068414560b6b";
-      String backofficeUrl = "https://backoffice-production-df78.up.railway.app/api/v1/parametros/" + parametroId;
-      
-      System.out.println("========================================");
-      System.out.println("Llamando a backoffice para obtener COSTO_RESERVA");
-      System.out.println("URL: " + backofficeUrl);
-      System.out.println("Token JWT: " + (jwtToken != null ? jwtToken.substring(0, Math.min(20, jwtToken.length())) + "..." : "null"));
-      System.out.println("========================================");
-      
-      // Llamar al backoffice pasando el token JWT
-      ParametroResponseDTO parametro = webClient.get()
-          .uri(backofficeUrl)
-          .header("Authorization", "Bearer " + jwtToken)
-          .retrieve()
-          .bodyToMono(ParametroResponseDTO.class)
-          .block();
-      
-      if (parametro == null) {
-        System.err.println("✗ El backoffice no retornó datos");
-        System.err.println("========================================");
-        throw new RuntimeException("No se pudo obtener el costo de la reserva desde el backoffice. Por favor, intente realizar la reserva más tarde.");
-      }
-      
-      System.out.println("Respuesta recibida del backoffice:");
-      System.out.println("ID: " + parametro.getId_parametro());
-      System.out.println("Nombre: " + parametro.getNombre());
-      System.out.println("Tipo: " + parametro.getTipo());
-      System.out.println("Valor numérico: " + parametro.getValor_numerico());
-      System.out.println("Status: " + parametro.isStatus());
-      
-      if (!parametro.isStatus()) {
-        System.err.println("✗ El parámetro está inactivo (status=false)");
-        System.err.println("========================================");
-        throw new RuntimeException("El parámetro de costo de reserva está desactivado. Por favor, intente realizar la reserva más tarde.");
-      }
-      
-      if (parametro.getValor_numerico() == null || parametro.getValor_numerico().trim().isEmpty()) {
-        System.err.println("✗ El parámetro no tiene valor numérico");
-        System.err.println("========================================");
-        throw new RuntimeException("El costo de reserva no está configurado correctamente. Por favor, intente realizar la reserva más tarde.");
-      }
-      
-      java.math.BigDecimal costo = new java.math.BigDecimal(parametro.getValor_numerico());
-      System.out.println("✓ COSTO_RESERVA obtenido: " + costo);
-      System.out.println("========================================");
-      return costo;
-      
-    } catch (RuntimeException e) {
-      // Re-lanzar excepciones de tipo RuntimeException (incluyendo las que acabamos de crear)
-      throw e;
-    } catch (Exception e) {
-      // En caso de error de comunicación, lanzar excepción
-      System.err.println("========================================");
-      System.err.println("✗ ERROR comunicándose con el backoffice:");
-      System.err.println("Tipo de error: " + e.getClass().getName());
-      System.err.println("Mensaje: " + e.getMessage());
-      e.printStackTrace();
-      System.err.println("========================================");
-      throw new RuntimeException("Error al comunicarse con el sistema de precios. Por favor, intente realizar la reserva más tarde.", e);
-    }
-  }
-  
   // DTO para mapear la respuesta del backoffice
   public static class ParametroResponseDTO {
     private String id_parametro;
@@ -170,19 +104,22 @@ public class ExternalApiService {
     
     public void setStatus(boolean status) {
       this.status = status;
-  /**
-   * Obtiene el costo de la reserva sin autenticación (para consultas internas)
-   * Nota: Este endpoint del backoffice debe ser público o deberías implementar autenticación de servicio
-   */
-  public java.math.BigDecimal getReservationCost() {
-    // Por ahora, lanzamos una excepción indicando que se debe usar la versión con token
-    throw new RuntimeException("Para obtener el costo de reserva se requiere autenticación. Use el método con token JWT.");
+    }
   }
 
-  // Método para obtener el costo de la reserva desde backoffice con autenticación
+  /**
+   * Obtiene el costo de la reserva sin autenticacion (para consultas internas)
+   * Nota: Este endpoint del backoffice debe ser publico o deberias implementar autenticacion de servicio
+   */
+  public java.math.BigDecimal getReservationCost() {
+    // Por ahora, lanzamos una excepcion indicando que se debe usar la version con token
+    throw new RuntimeException("Para obtener el costo de reserva se requiere autenticacion. Use el metodo con token JWT.");
+  }
+
+  // Metodo para obtener el costo de la reserva desde backoffice con autenticacion
   public java.math.BigDecimal getReservationCost(String jwtToken) {
     try {
-      // ID del parámetro "Coste Reserva" en el backoffice
+      // ID del parametro "Coste Reserva" en el backoffice
       String parametroId = "35814d0d-692c-4b68-b524-068414560b6b";
       String backofficeUrl = "https://backoffice-production-df78.up.railway.app/api/v1/parametros/" + parametroId;
       
@@ -201,32 +138,32 @@ public class ExternalApiService {
           .block();
       
       if (parametro == null) {
-        System.err.println("✗ El backoffice no retornó datos");
+        System.err.println("El backoffice no retorno datos");
         System.err.println("========================================");
-        throw new RuntimeException("No se pudo obtener el costo de la reserva desde el backoffice. Por favor, intente realizar la reserva más tarde.");
+        throw new RuntimeException("No se pudo obtener el costo de la reserva desde el backoffice. Por favor, intente realizar la reserva mas tarde.");
       }
       
       System.out.println("Respuesta recibida del backoffice:");
       System.out.println("ID: " + parametro.getId_parametro());
       System.out.println("Nombre: " + parametro.getNombre());
       System.out.println("Tipo: " + parametro.getTipo());
-      System.out.println("Valor numérico: " + parametro.getValor_numerico());
+      System.out.println("Valor numerico: " + parametro.getValor_numerico());
       System.out.println("Status: " + parametro.isStatus());
       
       if (!parametro.isStatus()) {
-        System.err.println("✗ El parámetro está inactivo (status=false)");
+        System.err.println("El parametro esta inactivo (status=false)");
         System.err.println("========================================");
-        throw new RuntimeException("El parámetro de costo de reserva está desactivado. Por favor, intente realizar la reserva más tarde.");
+        throw new RuntimeException("El parametro de costo de reserva esta desactivado. Por favor, intente realizar la reserva mas tarde.");
       }
       
       if (parametro.getValor_numerico() == null || parametro.getValor_numerico().trim().isEmpty()) {
-        System.err.println("✗ El parámetro no tiene valor numérico");
+        System.err.println("El parametro no tiene valor numerico");
         System.err.println("========================================");
-        throw new RuntimeException("El costo de reserva no está configurado correctamente. Por favor, intente realizar la reserva más tarde.");
+        throw new RuntimeException("El costo de reserva no esta configurado correctamente. Por favor, intente realizar la reserva mas tarde.");
       }
       
       java.math.BigDecimal costo = new java.math.BigDecimal(parametro.getValor_numerico());
-      System.out.println("✓ COSTO_RESERVA obtenido: " + costo);
+      System.out.println("COSTO_RESERVA obtenido: " + costo);
       System.out.println("========================================");
       return costo;
       
@@ -234,72 +171,14 @@ public class ExternalApiService {
       // Re-lanzar excepciones de tipo RuntimeException (incluyendo las que acabamos de crear)
       throw e;
     } catch (Exception e) {
-      // En caso de error de comunicación, lanzar excepción
+      // En caso de error de comunicacion, lanzar excepcion
       System.err.println("========================================");
-      System.err.println("✗ ERROR comunicándose con el backoffice:");
+      System.err.println("ERROR comunicandose con el backoffice:");
       System.err.println("Tipo de error: " + e.getClass().getName());
       System.err.println("Mensaje: " + e.getMessage());
       e.printStackTrace();
       System.err.println("========================================");
-      throw new RuntimeException("Error al comunicarse con el sistema de precios. Por favor, intente realizar la reserva más tarde.", e);
-    }
-  }
-  
-  // DTO para mapear la respuesta del backoffice
-  public static class ParametroResponseDTO {
-    private String id_parametro;
-    private String nombre;
-    private String tipo;
-    private String valor_numerico;
-    private String valor_texto;
-    private boolean status;
-    
-    public String getId_parametro() {
-      return id_parametro;
-    }
-    
-    public void setId_parametro(String id_parametro) {
-      this.id_parametro = id_parametro;
-    }
-    
-    public String getNombre() {
-      return nombre;
-    }
-    
-    public void setNombre(String nombre) {
-      this.nombre = nombre;
-    }
-    
-    public String getTipo() {
-      return tipo;
-    }
-    
-    public void setTipo(String tipo) {
-      this.tipo = tipo;
-    }
-    
-    public String getValor_numerico() {
-      return valor_numerico;
-    }
-    
-    public void setValor_numerico(String valor_numerico) {
-      this.valor_numerico = valor_numerico;
-    }
-    
-    public String getValor_texto() {
-      return valor_texto;
-    }
-    
-    public void setValor_texto(String valor_texto) {
-      this.valor_texto = valor_texto;
-    }
-    
-    public boolean isStatus() {
-      return status;
-    }
-    
-    public void setStatus(boolean status) {
-      this.status = status;
+      throw new RuntimeException("Error al comunicarse con el sistema de precios. Por favor, intente realizar la reserva mas tarde.", e);
     }
   }
 
@@ -349,11 +228,10 @@ public class ExternalApiService {
       return locations;
       
     } catch (RuntimeException e) {
-      // Re-lanzar las excepciones de negocio
       throw e;
     } catch (Exception e) {
       System.err.println("Error al conectar con el servicio de backoffice: " + e.getMessage());
-      throw new RuntimeException("No se pudieron obtener las sedes: error de conexión con el servicio externo", e);
+      throw new RuntimeException("No se pudieron obtener las sedes del backoffice", e);
     }
   }
 }
