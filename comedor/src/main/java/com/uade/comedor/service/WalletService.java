@@ -95,9 +95,16 @@ public class WalletService {
      * Realiza un cobro para un pedido de comida
      */
     public WalletTransferResponse chargeOrder(String userWalletId, BigDecimal amount, Long billId, String jwtToken) {
+        System.out.println("📝 [WalletService.chargeOrder] Preparando transferencia para pedido");
+        System.out.println("   From (User Wallet): " + userWalletId);
+        System.out.println("   To (System): " + systemAccount);
+        System.out.println("   Amount: " + amount);
+        System.out.println("   Bill ID: " + billId);
+        
         String description = billId != null
                 ? String.format("Pago de pedido #%d", billId)
                 : "Pago de pedido";
+        
         // Transferencia para compra de comida en cajero
         WalletTransferRequest request = new WalletTransferRequest(
                 userWalletId,
@@ -107,8 +114,13 @@ public class WalletService {
                 "COMPRA",
                 description
         );
+        
+        System.out.println("   Type: COMPRA");
+        System.out.println("   Description: " + description);
 
         try {
+            System.out.println("🌐 [WalletService.chargeOrder] Enviando request a Wallet API: " + walletApiUrl + "/api/transfers");
+            
             WalletTransferResponse response = webClient
                     .post()
                     .uri(walletApiUrl + "/api/transfers")
@@ -119,11 +131,20 @@ public class WalletService {
                     .block();
 
             if (response == null) {
+                System.err.println("❌ [WalletService.chargeOrder] No se recibió respuesta de la API de Wallet");
                 throw new RuntimeException("No se recibió respuesta de la API de Wallet");
             }
 
+            System.out.println("✅ [WalletService.chargeOrder] Transferencia completada exitosamente");
+            System.out.println("   Transfer ID: " + (response.getId() != null ? response.getId() : "N/A"));
+            System.out.println("   Status: " + (response.getStatus() != null ? response.getStatus() : "N/A"));
+            
             return response;
         } catch (WebClientResponseException e) {
+            System.err.println("❌ [WalletService.chargeOrder] Error HTTP en Wallet API");
+            System.err.println("   Status Code: " + e.getStatusCode().value());
+            System.err.println("   Response Body: " + e.getResponseBodyAsString());
+            
             String errorMessage = String.format(
                     "Error al realizar el cobro en la wallet. Status: %d, Response: %s",
                     e.getStatusCode().value(),
@@ -131,6 +152,8 @@ public class WalletService {
             );
             throw new RuntimeException(errorMessage, e);
         } catch (Exception e) {
+            System.err.println("❌ [WalletService.chargeOrder] Error general al conectar con Wallet API: " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Error al conectar con la API de Wallet: " + e.getMessage(), e);
         }
     }
@@ -246,6 +269,9 @@ public class WalletService {
 
         String walletsByUserUrl = "https://jtseq9puk0.execute-api.us-east-1.amazonaws.com/api/wallets/" + userId + "/user";
 
+        System.out.println("🔍 [WalletService.getWalletIdByUserId] Buscando wallet para userId: " + userId);
+        System.out.println("   URL: " + walletsByUserUrl);
+
         try {
             WalletApiResponse response = webClient
                     .get()
@@ -255,6 +281,7 @@ public class WalletService {
                     .block();
 
             if (response == null || !response.isSuccess() || response.getData() == null || response.getData().isEmpty()) {
+                System.err.println("❌ [WalletService.getWalletIdByUserId] No se encontró wallet para userId: " + userId);
                 throw new RuntimeException("No se encontró una wallet activa para el usuario: " + userId);
             }
 
@@ -262,11 +289,21 @@ public class WalletService {
             WalletDTO wallet = response.getData().get(0);
             
             if (wallet.getUuid() == null || wallet.getUuid().trim().isEmpty()) {
+                System.err.println("❌ [WalletService.getWalletIdByUserId] Wallet sin UUID válido para userId: " + userId);
                 throw new RuntimeException("La wallet del usuario no tiene un UUID válido");
             }
 
+            System.out.println("✅ [WalletService.getWalletIdByUserId] Wallet encontrada");
+            System.out.println("   WalletId: " + wallet.getUuid());
+            System.out.println("   Balance: " + wallet.getBalance());
+            System.out.println("   Currency: " + wallet.getCurrency());
+
             return wallet.getUuid();
         } catch (WebClientResponseException e) {
+            System.err.println("❌ [WalletService.getWalletIdByUserId] Error HTTP al buscar wallet");
+            System.err.println("   Status Code: " + e.getStatusCode().value());
+            System.err.println("   Response: " + e.getResponseBodyAsString());
+            
             String errorMessage = String.format(
                     "Error al consultar la wallet del usuario. Status: %d, Response: %s",
                     e.getStatusCode().value(),
@@ -274,6 +311,8 @@ public class WalletService {
             );
             throw new RuntimeException(errorMessage, e);
         } catch (Exception e) {
+            System.err.println("❌ [WalletService.getWalletIdByUserId] Error general: " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Error al conectar con la API de Wallet: " + e.getMessage(), e);
         }
     }
