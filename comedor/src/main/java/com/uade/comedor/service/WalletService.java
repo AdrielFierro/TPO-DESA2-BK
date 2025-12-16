@@ -259,10 +259,11 @@ public class WalletService {
     /**
      * Obtiene el walletId de un usuario a partir de su userId
      * @param userId UUID del usuario
+     * @param jwtToken Token de sesión para autenticación
      * @return walletId (UUID de la wallet)
      * @throws RuntimeException si no se encuentra la wallet o hay error en la comunicación
      */
-    public String getWalletIdByUserId(String userId) {
+    public String getWalletIdByUserId(String userId, String jwtToken) {
         if (userId == null || userId.trim().isEmpty()) {
             throw new RuntimeException("El userId no puede estar vacío");
         }
@@ -276,6 +277,7 @@ public class WalletService {
             WalletApiResponse response = webClient
                     .get()
                     .uri(walletsByUserUrl)
+                    .header("Authorization", "Bearer " + jwtToken)
                     .retrieve()
                     .bodyToMono(WalletApiResponse.class)
                     .block();
