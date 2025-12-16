@@ -28,15 +28,17 @@ public class CartService {
     private final BillService billService;
     private final ReservationRepository reservationRepository;
     private final WalletService walletService;
+    private final ReservationEventService reservationEventService;
     
     public CartService(CartRepository cartRepository, ProductRepository productRepository, 
                       BillService billService, ReservationRepository reservationRepository,
-                      WalletService walletService) {
+                      WalletService walletService, ReservationEventService reservationEventService) {
         this.cartRepository = cartRepository;
         this.productRepository = productRepository;
         this.billService = billService;
         this.reservationRepository = reservationRepository;
         this.walletService = walletService;
+        this.reservationEventService = reservationEventService;
     }
     
 
@@ -238,7 +240,10 @@ public class CartService {
             // Confirmar la reserva automáticamente
             if (reservation.getStatus() != Reservation.ReservationStatus.CONFIRMADA) {
                 reservation.setStatus(Reservation.ReservationStatus.CONFIRMADA);
-                reservationRepository.save(reservation);
+                Reservation savedReservation = reservationRepository.save(reservation);
+                
+                // Publicar evento de reserva actualizada (confirmada)
+                reservationEventService.publishReservationUpdatedEvent(savedReservation);
             }
         }
 

@@ -111,9 +111,23 @@ public class ReservationController {
 
     // DELETE /reservations/{reservationId} -> cancel
     @DeleteMapping("/{reservationId}")
-    public ResponseEntity<Reservation> cancel(@PathVariable Long reservationId) {
+    public ResponseEntity<Reservation> cancel(
+            @PathVariable Long reservationId,
+            @RequestHeader("Authorization") String authorizationHeader) {
         try {
-            Reservation r = reservationService.cancelReservation(reservationId);
+            // Obtener el walletId del contexto de autenticación (si está presente)
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String walletId = null;
+            if (authentication instanceof UserAuthenticationToken) {
+                walletId = ((UserAuthenticationToken) authentication).getWalletId();
+            }
+
+            // Extraer token (remover "Bearer " si existe)
+            String token = authorizationHeader.startsWith("Bearer ")
+                    ? authorizationHeader.substring(7)
+                    : authorizationHeader;
+
+            Reservation r = reservationService.cancelReservation(reservationId, walletId, token);
             return ResponseEntity.ok(r);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
