@@ -23,6 +23,9 @@ public class ReservationScheduledTasks {
     @Autowired
     private ReservationRepository reservationRepository;
     
+    @Autowired
+    private ReservationEventService reservationEventService;
+    
     /**
      * Tarea que se ejecuta cada 30 minutos para marcar como AUSENTE
      * las reservas ACTIVAS cuya fecha ya pasó
@@ -41,7 +44,10 @@ public class ReservationScheduledTasks {
         if (!expiredReservations.isEmpty()) {
             expiredReservations.forEach(reservation -> {
                 reservation.setStatus(Reservation.ReservationStatus.AUSENTE);
-                reservationRepository.save(reservation);
+                Reservation savedReservation = reservationRepository.save(reservation);
+                
+                // Publicar evento de reserva actualizada (marcada como ausente)
+                reservationEventService.publishReservationUpdatedEvent(savedReservation);
             });
             
             logger.info("✅ Marcadas {} reservas vencidas como AUSENTE", expiredReservations.size());

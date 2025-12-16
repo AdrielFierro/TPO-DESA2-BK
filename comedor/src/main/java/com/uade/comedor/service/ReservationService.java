@@ -224,15 +224,38 @@ public class ReservationService {
         return r;
     }
 
-    public Reservation cancelReservation(Long id) {
+    public Reservation cancelReservation(Long id, String walletId, String jwtToken) {
         Reservation r = reservationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
+
+        // Cambiar estado a CANCELADA
         r.setStatus(Reservation.ReservationStatus.CANCELADA);
         Reservation savedReservation = reservationRepository.save(r);
-        
+
+        // Intentar reembolso si corresponde (si la reserva tiene costo y se proporcionó walletId)
+        try {
+            if (savedReservation.getCost() != null && savedReservation.getCost().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                if (walletId != null && !walletId.isBlank()) {
+                    // Hacer el reembolso desde SYSTEM hacia la wallet del usuario
+                    try {
+                        walletService.refundReservation(walletId, savedReservation.getCost(), savedReservation.getId(), jwtToken);
+                    } catch (Exception e) {
+                        // Loggear el error pero no impedir la cancelación
+                        System.err.println("Error al realizar el reembolso de la reserva: " + e.getMessage());
+                    }
+                } else {
+                    // No tenemos walletId: no podemos reembolsar automáticamente
+                    System.err.println("No se proporcionó walletId en el contexto; no se realizó reembolso");
+                }
+            }
+        } catch (Exception ex) {
+            // Protección adicional: nunca dejar que un fallo en la lógica de reembolso rompa la cancelación
+            System.err.println("Error en la lógica de reembolso: " + ex.getMessage());
+        }
+
         // Publicar evento de reserva actualizada (cancelada)
         reservationEventService.publishReservationUpdatedEvent(savedReservation);
-        
+
         return savedReservation;
     }
 
