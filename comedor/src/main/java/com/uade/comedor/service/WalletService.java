@@ -1,5 +1,7 @@
 package com.uade.comedor.service;
 
+import com.uade.comedor.dto.WalletApiResponse;
+import com.uade.comedor.dto.WalletDTO;
 import com.uade.comedor.dto.WalletTransferRequest;
 import com.uade.comedor.dto.WalletTransferResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,6 +10,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Servicio para integrar con la API de Wallet
@@ -228,5 +231,50 @@ public class WalletService {
                 ? String.format("Devolución por cancelación de reserva #%d", reservationId)
                 : "Devolución por cancelación de reserva";
         return transferFromSystemToUser(userWalletId, amount, "CANCELACION_RESERVA", description, jwtToken);
+    }
+
+    /**
+     * Obtiene el walletId de un usuario a partir de su userId
+     * @param userId UUID del usuario
+     * @return walletId (UUID de la wallet)
+     * @throws RuntimeException si no se encuentra la wallet o hay error en la comunicación
+     */
+    public String getWalletIdByUserId(String userId) {
+        if (userId == null || userId.trim().isEmpty()) {
+            throw new RuntimeException("El userId no puede estar vacío");
+        }
+
+        String walletsByUserUrl = "https://jtseq9puk0.execute-api.us-east-1.amazonaws.com/api/wallets/" + userId + "/user";
+
+        try {
+            WalletApiResponse response = webClient
+                    .get()
+                    .uri(walletsByUserUrl)
+                    .retrieve()
+                    .bodyToMono(WalletApiResponse.class)
+                    .block();
+
+            if (response == null || !response.isSuccess() || response.getData() == null || response.getData().isEmpty()) {
+                throw new RuntimeException("No se encontró una wallet activa para el usuario: " + userId);
+            }
+
+            // Obtener la primera wallet (asumiendo que un usuario tiene una sola wallet)
+            WalletDTO wallet = response.getData().get(0);
+            
+            if (wallet.getUuid() == null || wallet.getUuid().trim().isEmpty()) {
+                throw new RuntimeException("La wallet del usuario no tiene un UUID válido");
+            }
+
+            return wallet.getUuid();
+        } catch (WebClientResponseException e) {
+            String errorMessage = String.format(
+                    "Error al consultar la wallet del usuario. Status: %d, Response: %s",
+                    e.getStatusCode().value(),
+                    e.getResponseBodyAsString()
+            );
+            throw new RuntimeException(errorMessage, e);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al conectar con la API de Wallet: " + e.getMessage(), e);
+        }
     }
 }

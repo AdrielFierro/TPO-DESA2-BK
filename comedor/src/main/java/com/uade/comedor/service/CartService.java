@@ -189,19 +189,32 @@ public class CartService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se pueden confirmar carritos abiertos");
         }
 
-        // Realizar el cobro en la wallet ANTES de confirmar el carrito (pasando el token JWT)
-        try {
-            walletService.chargeOrder(walletId, cart.getTotal(), null, jwtToken); // null porque aún no tenemos el billId
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
-                "No se pudo realizar el cobro en la wallet: " + e.getMessage(), e);
+        // El carrito SIEMPRE tiene una reserva asociada
+        if (cart.getReservationId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El carrito debe tener una reserva asociada");
         }
 
-        // Si el carrito tiene una reserva asociada, confirmarla automáticamente
+        Reservation reservation = reservationRepository.findById(cart.getReservationId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
+                "Reserva no encontrada"));
+
+        // Realizar el cobro en la wallet SOLO si el método de pago es SALDOCUENTA
+        if (cart.getPaymentMethod() == Cart.PaymentMethod.SALDOCUENTA) {
+            try {
+                // Obtener el walletId del usuario que hizo la reserva (no del cajero autenticado)
+                String userWalletId = walletService.getWalletIdByUserId(reservation.getUserId());
+                
+                // Cobrar a la wallet del comensal que hizo la reserva
+                walletService.chargeOrder(userWalletId, cart.getTotal(), null, jwtToken);
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                    "No se pudo realizar el cobro en la wallet: " + e.getMessage(), e);
+            }
+        }
+        // Si es EFECTIVO o TRANSFERENCIA, no se hace cobro automático en wallet
+
+        // Confirmar la reserva automáticamente
         if (cart.getReservationId() != null) {
-            Reservation reservation = reservationRepository.findById(cart.getReservationId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, 
-                    "Reserva no encontrada"));
             
             // Validar ventana: desde 20 minutos antes del inicio del slot hasta el fin del slot
             LocalDateTime now = LocalDateTime.now();
