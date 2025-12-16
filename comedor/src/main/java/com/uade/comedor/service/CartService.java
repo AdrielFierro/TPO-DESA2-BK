@@ -44,6 +44,11 @@ public class CartService {
 
     @Transactional
     public Cart createCart(CartCreateRequest request) {
+        System.out.println("🛒 [CartService.createCart] Creando nuevo carrito");
+        System.out.println("   Payment Method recibido: " + request.getPaymentMethod());
+        System.out.println("   Reservation ID: " + request.getReservationId());
+        System.out.println("   Bill ID: " + request.getBillId());
+        
         List<Product> products = getProductsFromIds(request.getCart());
         BigDecimal subtotal = calculateTotal(products);
         BigDecimal discount = BigDecimal.ZERO;
@@ -142,6 +147,7 @@ public class CartService {
         
         cart.setUserId(userId);
         cart.setPaymentMethod(request.getPaymentMethod());
+        System.out.println("✅ [CartService.createCart] Payment Method asignado al carrito: " + cart.getPaymentMethod());
         cart.setStatus(Cart.CartStatus.OPEN);
         cart.setProducts(products);
     // Asociar a factura si se pidió
@@ -156,6 +162,9 @@ public class CartService {
 
     @Transactional
     public Cart updateCart(Long id, CartCreateRequest request) {
+        System.out.println("🔄 [CartService.updateCart] Actualizando carrito ID: " + id);
+        System.out.println("   Payment Method recibido: " + request.getPaymentMethod());
+        
         Cart cart = cartRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Carrito no encontrado"));
             
@@ -164,7 +173,9 @@ public class CartService {
         }
 
         List<Product> products = getProductsFromIds(request.getCart());
+        System.out.println("   Payment Method anterior: " + cart.getPaymentMethod());
         cart.setPaymentMethod(request.getPaymentMethod());
+        System.out.println("   Payment Method nuevo: " + cart.getPaymentMethod());
         cart.setProducts(products);
         cart.setTotal(calculateTotal(products));
         
@@ -211,7 +222,7 @@ public class CartService {
             try {
                 // Obtener el walletId del usuario que hizo la reserva (no del cajero autenticado)
                 System.out.println("🔍 Buscando walletId para userId: " + reservation.getUserId());
-                String userWalletId = walletService.getWalletIdByUserId(reservation.getUserId());
+                String userWalletId = walletService.getWalletIdByUserId(reservation.getUserId(), jwtToken);
                 System.out.println("✅ WalletId encontrado: " + userWalletId);
                 
                 // Cobrar a la wallet del comensal que hizo la reserva
