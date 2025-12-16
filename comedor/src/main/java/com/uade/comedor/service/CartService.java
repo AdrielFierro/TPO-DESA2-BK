@@ -189,13 +189,16 @@ public class CartService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se pueden confirmar carritos abiertos");
         }
 
-        // Realizar el cobro en la wallet ANTES de confirmar el carrito (pasando el token JWT)
-        try {
-            walletService.chargeOrder(walletId, cart.getTotal(), null, jwtToken); // null porque aún no tenemos el billId
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
-                "No se pudo realizar el cobro en la wallet: " + e.getMessage(), e);
+        // Realizar el cobro en la wallet SOLO si el método de pago es SALDOCUENTA
+        if (cart.getPaymentMethod() == Cart.PaymentMethod.SALDOCUENTA) {
+            try {
+                walletService.chargeOrder(walletId, cart.getTotal(), null, jwtToken); // null porque aún no tenemos el billId
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                    "No se pudo realizar el cobro en la wallet: " + e.getMessage(), e);
+            }
         }
+        // Si es EFECTIVO o TRANSFERENCIA, no se hace cobro automático en wallet
 
         // Si el carrito tiene una reserva asociada, confirmarla automáticamente
         if (cart.getReservationId() != null) {
