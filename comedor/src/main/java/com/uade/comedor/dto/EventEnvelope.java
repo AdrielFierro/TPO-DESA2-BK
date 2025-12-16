@@ -1,5 +1,6 @@
 package com.uade.comedor.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -10,8 +11,13 @@ import java.util.UUID;
 public class EventEnvelope<T> {
     private String eventId;
     private String eventType;
+    
+    @JsonFormat(pattern = "dd-MM-yyyy HH:mm:ss")
     private LocalDateTime occurredAt;
+    
+    @JsonFormat(pattern = "dd-MM-yyyy HH:mm:ss")
     private LocalDateTime emittedAt;
+    
     private String sourceModule;
     private T payload;
 

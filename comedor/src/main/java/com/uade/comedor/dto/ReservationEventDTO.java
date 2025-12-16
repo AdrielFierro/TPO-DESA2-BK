@@ -1,5 +1,6 @@
 package com.uade.comedor.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -10,11 +11,20 @@ public class ReservationEventDTO {
     private String locationId; // UUID de la sede
     private String mealTime;
     private String reservationTimeSlot;
+    
+    @JsonFormat(pattern = "dd-MM-yyyy HH:mm:ss")
     private LocalDateTime reservationDate;
+    
     private String status;
     private BigDecimal cost;
+    
+    @JsonFormat(pattern = "dd-MM-yyyy HH:mm:ss")
     private LocalDateTime createdAt;
+    
+    @JsonFormat(pattern = "HH:mm:ss")
     private LocalTime slotStartTime;
+    
+    @JsonFormat(pattern = "HH:mm:ss")
     private LocalTime slotEndTime;
 
     // Constructors
