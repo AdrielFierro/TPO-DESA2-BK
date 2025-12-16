@@ -199,19 +199,35 @@ public class CartService {
                 "Reserva no encontrada"));
 
         // Realizar el cobro en la wallet SOLO si el método de pago es SALDOCUENTA
+        System.out.println("========================================");
+        System.out.println("PROCESO DE COMPRA - Cart ID: " + id);
+        System.out.println("Método de pago: " + cart.getPaymentMethod());
+        System.out.println("Total del carrito: " + cart.getTotal());
+        System.out.println("Reserva ID: " + cart.getReservationId());
+        System.out.println("Usuario de la reserva (comensal): " + reservation.getUserId());
+        
         if (cart.getPaymentMethod() == Cart.PaymentMethod.SALDOCUENTA) {
+            System.out.println("💳 Procesando pago con SALDOCUENTA...");
             try {
                 // Obtener el walletId del usuario que hizo la reserva (no del cajero autenticado)
+                System.out.println("🔍 Buscando walletId para userId: " + reservation.getUserId());
                 String userWalletId = walletService.getWalletIdByUserId(reservation.getUserId());
+                System.out.println("✅ WalletId encontrado: " + userWalletId);
                 
                 // Cobrar a la wallet del comensal que hizo la reserva
+                System.out.println("💰 Iniciando transferencia...");
                 walletService.chargeOrder(userWalletId, cart.getTotal(), null, jwtToken);
+                System.out.println("✅ Transferencia completada exitosamente");
             } catch (Exception e) {
+                System.err.println("❌ ERROR en el proceso de pago: " + e.getMessage());
+                e.printStackTrace();
                 throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
                     "No se pudo realizar el cobro en la wallet: " + e.getMessage(), e);
             }
+        } else {
+            System.out.println("ℹ️  Método de pago " + cart.getPaymentMethod() + " - No se hace cobro en wallet");
         }
-        // Si es EFECTIVO o TRANSFERENCIA, no se hace cobro automático en wallet
+        System.out.println("========================================");
 
         // Confirmar la reserva automáticamente
         if (cart.getReservationId() != null) {
